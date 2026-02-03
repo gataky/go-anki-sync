@@ -126,7 +126,16 @@ small {
 }
 
 // AddNote creates a single note in Anki and returns the generated note ID.
+// Checks for duplicates using English+Greek combination before adding.
 func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard) (int64, error) {
+	// Check for existing note with same English + Greek
+	// This allows multiple entries with same English but different Greek
+	// e.g., "when" (όταν) and "when" (πότε) are both valid
+	existingID, err := c.findNoteByEnglishGreek(deckName, card.English, card.Greek)
+	if err == nil && existingID > 0 {
+		return 0, fmt.Errorf("duplicate card already exists: %s → %s (Anki ID: %d)", card.English, card.Greek, existingID)
+	}
+
 	// Build fields from card
 	fields := ankiconnect.Fields{
 		"Front":    card.English,
@@ -150,15 +159,32 @@ func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard)
 		return 0, fmt.Errorf("failed to add note: %v", err)
 	}
 
-	// To get the note ID, we need to search for it
-	// Search for the note we just created by Front field
-	query := fmt.Sprintf(`deck:"%s" "Front:%s"`, deckName, card.English)
-	noteIDs, err := c.client.Notes.Search(query)
-	if err != nil || noteIDs == nil || len(*noteIDs) == 0 {
-		return 0, fmt.Errorf("note was created but could not retrieve its ID")
+	// Retrieve the note ID by searching for English + Greek
+	// This ensures we get the correct card even with English duplicates
+	noteID, err := c.findNoteByEnglishGreek(deckName, card.English, card.Greek)
+	if err != nil {
+		return 0, fmt.Errorf("note was created but could not retrieve its ID: %w", err)
 	}
 
-	// Return the first matching note ID (should be the one we just created)
+	return noteID, nil
+}
+
+// findNoteByEnglishGreek searches for a note by English + Greek combination.
+// Returns the note ID if found, or 0 if not found.
+func (c *AnkiClient) findNoteByEnglishGreek(deckName, english, greek string) (int64, error) {
+	// Search by both Front (English) and Back (Greek) fields
+	// This ensures uniqueness is based on the combination
+	query := fmt.Sprintf(`deck:"%s" "Front:%s" "Back:%s"`, deckName, english, greek)
+	noteIDs, err := c.client.Notes.Search(query)
+	if err != nil {
+		return 0, fmt.Errorf("search failed: %v", err)
+	}
+
+	if noteIDs == nil || len(*noteIDs) == 0 {
+		return 0, fmt.Errorf("note not found")
+	}
+
+	// Return the first matching note ID
 	return (*noteIDs)[0], nil
 }
 

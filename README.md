@@ -203,6 +203,18 @@ The tool uses SHA256 checksums of content fields to detect changes:
 - **Content fields**: English, Greek, Part of Speech, Attributes, Examples, Tag, Sub-Tag 1, Sub-Tag 2
 - **Excluded from checksum**: Anki ID, Checksum (itself), Row Number, Modified At
 
+### Duplicate Detection
+
+**Duplicates are determined by the English + Greek combination:**
+
+- ✅ Allowed: Same English, different Greek
+  - Example: "when" (όταν) - conjunction
+  - Example: "when" (πότε) - adverb
+- ❌ Rejected: Same English + Greek (true duplicate)
+  - Example: "hello" (γεια) appears twice
+
+This allows multiple translations/meanings of the same English word.
+
 ### Conflict Resolution
 
 When a card is modified in both Sheets and Anki:
