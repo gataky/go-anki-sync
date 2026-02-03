@@ -2,6 +2,8 @@
 
 A bidirectional sync tool for managing vocabulary flashcards between Google Sheets and Anki.
 
+**🚀 New to this tool? Start with [SETUP.md](SETUP.md) for a 5-minute quick start guide!**
+
 ## Features
 
 - **Bidirectional Sync**: Keep your Google Sheets and Anki deck in perfect sync
