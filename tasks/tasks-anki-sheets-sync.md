@@ -82,12 +82,12 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 1.9 Add test dependencies: `go get github.com/stretchr/testify` (testing assertions and mocks)
   - [x] 1.10 Run `go mod tidy` to clean up dependencies
 
-- [ ] 2.0 Implement domain models and core types
-  - [ ] 2.1 Create `pkg/models/card.go` with VocabCard struct: RowNumber (int), AnkiID (int64), StoredChecksum (string), English (string), Greek (string), PartOfSpeech (string), Attributes (string), Examples (string), Tag (string), SubTag1 (string), SubTag2 (string), ModifiedAt (time.Time)
-  - [ ] 2.2 Create `pkg/models/config.go` with Config struct: GoogleSheetID, SheetName, AnkiDeck, AnkiConnectURL, GoogleTokenPath, LogLevel
-  - [ ] 2.3 Add SyncState struct to `pkg/models/config.go`: LastPullTimestamp, LastPushTimestamp, ConfigHash
-  - [ ] 2.4 Add validation methods to Config (e.g., `Validate() error` to check required fields)
-  - [ ] 2.5 Add constants for default values (default AnkiConnect URL "http://localhost:8765", default log level "info")
+- [x] 2.0 Implement domain models and core types
+  - [x] 2.1 Create `pkg/models/card.go` with VocabCard struct: RowNumber (int), AnkiID (int64), StoredChecksum (string), English (string), Greek (string), PartOfSpeech (string), Attributes (string), Examples (string), Tag (string), SubTag1 (string), SubTag2 (string), ModifiedAt (time.Time)
+  - [x] 2.2 Create `pkg/models/config.go` with Config struct: GoogleSheetID, SheetName, AnkiDeck, AnkiConnectURL, GoogleTokenPath, LogLevel
+  - [x] 2.3 Add SyncState struct to `pkg/models/config.go`: LastPullTimestamp, LastPushTimestamp, ConfigHash
+  - [x] 2.4 Add validation methods to Config (e.g., `Validate() error` to check required fields)
+  - [x] 2.5 Add constants for default values (default AnkiConnect URL "http://localhost:8765", default log level "info")
 
 - [ ] 3.0 Implement configuration management
   - [ ] 3.1 Create `internal/config/config.go` with function `GetConfigDir() (string, error)` that returns `~/.sync/` (expanded home directory)
