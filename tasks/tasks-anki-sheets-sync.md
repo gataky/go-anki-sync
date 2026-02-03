@@ -147,28 +147,28 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 7.13 Tests for empty fields, nil cells, short rows included
   - [x] 7.14 Tag hierarchy validation tests included in ValidateCard tests
 
-- [ ] 8.0 Implement push sync (Sheets to Anki)
-  - [ ] 8.1 Create `internal/sync/pusher.go` with Pusher struct containing SheetsClient, AnkiClient, Config, Logger
-  - [ ] 8.2 Implement `NewPusher(sheetsClient, ankiClient, config, logger) *Pusher` constructor
-  - [ ] 8.3 Implement `Push(dryRun bool) error` main entry point
-  - [ ] 8.4 In Push: Read all rows from Google Sheet using SheetsClient
-  - [ ] 8.5 In Push: Parse headers and validate required columns exist
-  - [ ] 8.6 In Push: Create Checksum column if missing
-  - [ ] 8.7 In Push: Convert all rows to VocabCard structs with validation (fail fast on first error)
-  - [ ] 8.8 In Push: Separate cards into newCards (AnkiID == 0) and existingCards (AnkiID > 0)
-  - [ ] 8.9 In Push: Ensure deck exists using AnkiClient.CreateDeck
-  - [ ] 8.10 In Push: Ensure VocabSync note type exists using AnkiClient.CreateNoteType
-  - [ ] 8.11 Implement `createNewCards(cards []*models.VocabCard, dryRun bool) ([]CellUpdate, error)` that processes new cards sequentially
-  - [ ] 8.12 In createNewCards: Loop through each new card, call AnkiClient.AddNote, collect Anki ID and checksum
-  - [ ] 8.13 In createNewCards: Return list of CellUpdate for batch writing Anki IDs and checksums to Sheet
-  - [ ] 8.14 In Push: If dryRun is false, write Anki IDs and checksums to Sheet using BatchUpdateCells
-  - [ ] 8.15 Implement `updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]CellUpdate, error)` that processes changed cards
-  - [ ] 8.16 In updateExistingCards: For each card, calculate current checksum and compare with StoredChecksum
-  - [ ] 8.17 In updateExistingCards: If checksum differs, call AnkiClient.UpdateNoteFields, collect new checksum for Sheet update
-  - [ ] 8.18 In Push: If dryRun is false, write updated checksums to Sheet
-  - [ ] 8.19 In Push: Log summary: "Created X new cards, updated Y cards, Z unchanged"
-  - [ ] 8.20 If dryRun is true, log preview: "Would create X cards, would update Y cards" without making changes
-  - [ ] 8.21 Create `internal/sync/pusher_test.go` with mocked tests for push scenarios
+- [x] 8.0 Implement push sync (Sheets to Anki)
+  - [x] 8.1 Create `internal/sync/pusher.go` with Pusher struct using interfaces for testability
+  - [x] 8.2 Implement `NewPusher(sheetsClient, ankiClient, config, logger) *Pusher` constructor
+  - [x] 8.3 Implement `Push(dryRun bool) error` main entry point
+  - [x] 8.4 In Push: Read all rows from Google Sheet using SheetsClient
+  - [x] 8.5 In Push: Parse headers and validate required columns exist
+  - [x] 8.6 In Push: Create Checksum column if missing
+  - [x] 8.7 In Push: Convert all rows to VocabCard structs with validation (fail fast on first error)
+  - [x] 8.8 In Push: Separate cards into newCards (AnkiID == 0) and existingCards (AnkiID > 0)
+  - [x] 8.9 In Push: Ensure deck exists using AnkiClient.CreateDeck
+  - [x] 8.10 In Push: Ensure VocabSync note type exists using AnkiClient.CreateNoteType
+  - [x] 8.11 Implement `createNewCards(cards []*models.VocabCard, dryRun bool) ([]CellUpdate, error)` that processes new cards sequentially
+  - [x] 8.12 In createNewCards: Loop through each new card, call AnkiClient.AddNote, collect Anki ID and checksum
+  - [x] 8.13 In createNewCards: Return list of CellUpdate for batch writing Anki IDs and checksums to Sheet
+  - [x] 8.14 In Push: If dryRun is false, write Anki IDs and checksums to Sheet using BatchUpdateCells
+  - [x] 8.15 Implement `updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]CellUpdate, error)` that processes changed cards
+  - [x] 8.16 In updateExistingCards: For each card, calculate current checksum and compare with StoredChecksum
+  - [x] 8.17 In updateExistingCards: If checksum differs, call AnkiClient.UpdateNoteFields, collect new checksum for Sheet update
+  - [x] 8.18 In Push: If dryRun is false, write updated checksums to Sheet
+  - [x] 8.19 In Push: Log summary: "Created X new cards, updated Y cards, Z unchanged"
+  - [x] 8.20 If dryRun is true, log preview: "Would create X cards, would update Y cards" without making changes
+  - [x] 8.21 Create `internal/sync/pusher_test.go` with mocked tests for push scenarios (10 test cases, all passing)
 
 - [ ] 9.0 Implement pull sync (Anki to Sheets)
   - [ ] 9.1 Create `internal/sync/puller.go` with Puller struct containing SheetsClient, AnkiClient, Config, State, Logger
