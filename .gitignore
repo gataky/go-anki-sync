@@ -42,3 +42,5 @@ dist/
 build/
 
 docs/
+.direnv/
+.claude/
