@@ -170,23 +170,23 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 8.20 If dryRun is true, log preview: "Would create X cards, would update Y cards" without making changes
   - [x] 8.21 Create `internal/sync/pusher_test.go` with mocked tests for push scenarios (10 test cases, all passing)
 
-- [ ] 9.0 Implement pull sync (Anki to Sheets)
-  - [ ] 9.1 Create `internal/sync/puller.go` with Puller struct containing SheetsClient, AnkiClient, Config, State, Logger
-  - [ ] 9.2 Implement `NewPuller(sheetsClient, ankiClient, config, state, logger) *Puller` constructor
-  - [ ] 9.3 Implement `Pull(dryRun bool) error` main entry point
-  - [ ] 9.4 In Pull: Load last pull timestamp from state
-  - [ ] 9.5 In Pull: Query Anki for modified notes since last timestamp using AnkiClient.FindModifiedNotes
-  - [ ] 9.6 In Pull: If no modified notes, log "No changes in Anki since last pull" and return
-  - [ ] 9.7 In Pull: Fetch full note details using AnkiClient.GetNotesInfo
-  - [ ] 9.8 In Pull: Read current Sheet data to build map of AnkiID -> RowNumber
-  - [ ] 9.9 In Pull: For each modified note, find corresponding row in Sheet by AnkiID
-  - [ ] 9.10 In Pull: If note not found in Sheet (deleted), skip silently (only delete during "both" command)
-  - [ ] 9.11 In Pull: Build CellUpdate list for content fields (English, Greek, Part of Speech, Attributes, Examples) and checksum
-  - [ ] 9.12 In Pull: If dryRun is false, write updates to Sheet using BatchUpdateCells
-  - [ ] 9.13 In Pull: Update state with new LastPullTimestamp and save state file
-  - [ ] 9.14 In Pull: Log summary: "Updated X rows from Anki changes"
-  - [ ] 9.15 If dryRun is true, log preview without making changes or updating state
-  - [ ] 9.16 Create `internal/sync/puller_test.go` with mocked tests for pull scenarios
+- [x] 9.0 Implement pull sync (Anki to Sheets)
+  - [x] 9.1 Create `internal/sync/puller.go` with Puller struct using interfaces
+  - [x] 9.2 Implement `NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger) *Puller` constructor
+  - [x] 9.3 Implement `Pull(dryRun bool) error` main entry point
+  - [x] 9.4 In Pull: Load last pull timestamp from state (default to 1 year ago if zero)
+  - [x] 9.5 In Pull: Query Anki for modified notes since last timestamp using FindModifiedNotes
+  - [x] 9.6 In Pull: If no modified notes, log "No changes in Anki since last pull" and return
+  - [x] 9.7 In Pull: Fetch full note details using GetNotesInfo
+  - [x] 9.8 In Pull: Read current Sheet data to build map of AnkiID -> RowNumber
+  - [x] 9.9 In Pull: For each modified note, find corresponding row in Sheet by AnkiID
+  - [x] 9.10 In Pull: If note not found in Sheet (deleted), skip silently with log message
+  - [x] 9.11 In Pull: Build CellUpdate list for all content fields and checksum (9 updates per card)
+  - [x] 9.12 In Pull: If dryRun is false, write updates to Sheet using BatchUpdateCells
+  - [x] 9.13 In Pull: Update state with new LastPullTimestamp and save state file
+  - [x] 9.14 In Pull: Log summary: "Updated X rows from Anki changes"
+  - [x] 9.15 If dryRun is true, log preview without making changes or updating state
+  - [x] 9.16 Create `internal/sync/puller_test.go` with 7 test cases covering all scenarios
 
 - [ ] 10.0 Implement bidirectional sync with conflict resolution
   - [ ] 10.1 Create `internal/sync/both.go` with BothSyncer struct containing Pusher, Puller, SheetsClient, AnkiClient, Config, State, Logger
