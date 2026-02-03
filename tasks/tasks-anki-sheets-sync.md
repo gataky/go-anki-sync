@@ -106,17 +106,17 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 4.5 Implement `CalculateConfigHash(config *models.Config) string` to detect config changes
   - [x] 4.6 Create `internal/state/state_test.go` with tests for state persistence and config hash calculation
 
-- [ ] 5.0 Implement Google Sheets integration
-  - [ ] 5.1 Create `internal/sheets/client.go` with SheetsClient struct containing authenticated Sheets service
-  - [ ] 5.2 Implement `NewSheetsClient(credentialsPath, tokenPath string) (*SheetsClient, error)` that handles OAuth2 flow
-  - [ ] 5.3 Implement OAuth2 flow: if token.json doesn't exist, start OAuth flow using credentials.json, save token with 0600 permissions
-  - [ ] 5.4 Implement `ReadSheet(sheetID, sheetName string) ([][]interface{}, error)` to fetch all rows using Sheets API
-  - [ ] 5.5 Implement `ParseHeaders(rows [][]interface{}) (map[string]int, error)` to find column indices (case-insensitive matching for "Anki ID", "Checksum", "English", "Greek", etc.)
-  - [ ] 5.6 Validate that required columns exist (English, Greek, Part of Speech) and return error with missing column names if not found
-  - [ ] 5.7 Implement `BatchUpdateCells(sheetID, sheetName string, updates []CellUpdate) error` using Sheets API BatchUpdate endpoint
-  - [ ] 5.8 Define CellUpdate struct with Row, Column, Value fields for batch operations
-  - [ ] 5.9 Implement `CreateChecksumColumnIfMissing(sheetID, sheetName string) error` to add Checksum column if it doesn't exist
-  - [ ] 5.10 Create `internal/sheets/client_test.go` with mocked Sheets API tests for reading and batch updates
+- [x] 5.0 Implement Google Sheets integration
+  - [x] 5.1 Create `internal/sheets/client.go` with SheetsClient struct containing authenticated Sheets service
+  - [x] 5.2 Implement `NewSheetsClient(credentialsPath, tokenPath string) (*SheetsClient, error)` that handles OAuth2 flow
+  - [x] 5.3 Implement OAuth2 flow: if token.json doesn't exist, start OAuth flow using credentials.json, save token with 0600 permissions
+  - [x] 5.4 Implement `ReadSheet(sheetID, sheetName string) ([][]interface{}, error)` to fetch all rows using Sheets API
+  - [x] 5.5 Implement `ParseHeaders(rows [][]interface{}) (map[string]int, error)` to find column indices (case-insensitive matching for "Anki ID", "Checksum", "English", "Greek", etc.)
+  - [x] 5.6 Validate that required columns exist (English, Greek, Part of Speech) and return error with missing column names if not found
+  - [x] 5.7 Implement `BatchUpdateCells(sheetID, sheetName string, updates []CellUpdate) error` using Sheets API BatchUpdate endpoint
+  - [x] 5.8 Define CellUpdate struct with Row, Column, Value fields for batch operations
+  - [x] 5.9 Implement `CreateChecksumColumnIfMissing(sheetID, sheetName string) error` to add Checksum column if it doesn't exist
+  - [x] 5.10 Create `internal/sheets/client_test.go` with mocked Sheets API tests for reading and batch updates
 
 - [ ] 6.0 Implement AnkiConnect integration
   - [ ] 6.1 Create `internal/anki/client.go` with AnkiClient struct
