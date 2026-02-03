@@ -1,0 +1,44 @@
+# Binaries for programs and plugins
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Environment files
+.env
+.env.local
+
+# Google OAuth credentials and tokens
+credentials.json
+token.json
+
+# User configuration (contains sensitive paths)
+config.yaml
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+
+docs/
