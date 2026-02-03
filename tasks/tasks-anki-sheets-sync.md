@@ -89,14 +89,14 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 2.4 Add validation methods to Config (e.g., `Validate() error` to check required fields)
   - [x] 2.5 Add constants for default values (default AnkiConnect URL "http://localhost:8765", default log level "info")
 
-- [ ] 3.0 Implement configuration management
-  - [ ] 3.1 Create `internal/config/config.go` with function `GetConfigDir() (string, error)` that returns `~/.sync/` (expanded home directory)
-  - [ ] 3.2 Implement `LoadConfig(path string) (*models.Config, error)` to read YAML config from file
-  - [ ] 3.3 Implement `SaveConfig(config *models.Config, path string) error` to write YAML config to file
-  - [ ] 3.4 Implement `EnsureConfigDir() error` to create `~/.sync/` directory if it doesn't exist
-  - [ ] 3.5 Implement `GetDefaultConfigPath() string` that returns `~/.sync/config.yaml`
-  - [ ] 3.6 Create `internal/config/config_test.go` with tests for loading, saving, and validation
-  - [ ] 3.7 Add test for missing required config fields (should return validation error)
+- [x] 3.0 Implement configuration management
+  - [x] 3.1 Create `internal/config/config.go` with function `GetConfigDir() (string, error)` that returns `~/.sync/` (expanded home directory)
+  - [x] 3.2 Implement `LoadConfig(path string) (*models.Config, error)` to read YAML config from file
+  - [x] 3.3 Implement `SaveConfig(config *models.Config, path string) error` to write YAML config to file
+  - [x] 3.4 Implement `EnsureConfigDir() error` to create `~/.sync/` directory if it doesn't exist
+  - [x] 3.5 Implement `GetDefaultConfigPath() string` that returns `~/.sync/config.yaml`
+  - [x] 3.6 Create `internal/config/config_test.go` with tests for loading, saving, and validation
+  - [x] 3.7 Add test for missing required config fields (should return validation error)
 
 - [ ] 4.0 Implement state management
   - [ ] 4.1 Create `internal/state/state.go` with function `LoadState(path string) (*models.SyncState, error)` to read JSON state file
