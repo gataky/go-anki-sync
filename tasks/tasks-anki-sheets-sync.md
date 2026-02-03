@@ -70,17 +70,17 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 0.3 Create feature branch `git checkout -b feature/initial-implementation`
   - [x] 0.4 Make initial commit with project structure
 
-- [ ] 1.0 Set up Go project structure and dependencies
-  - [ ] 1.1 Initialize Go module with `go mod init github.com/yourusername/sync` (adjust username as needed)
-  - [ ] 1.2 Create directory structure: `cmd/sync/`, `internal/cli/`, `internal/config/`, `internal/state/`, `internal/sheets/`, `internal/anki/`, `internal/sync/`, `internal/mapper/`, `pkg/models/`, `testdata/`
-  - [ ] 1.3 Add dependencies: `go get github.com/spf13/cobra@latest` (CLI framework)
-  - [ ] 1.4 Add dependencies: `go get github.com/spf13/pflag@latest` (CLI flags)
-  - [ ] 1.5 Add dependencies: `go get google.golang.org/api/sheets/v4` (Google Sheets API)
-  - [ ] 1.6 Add dependencies: `go get golang.org/x/oauth2` (OAuth2 support)
-  - [ ] 1.7 Add dependencies: `go get github.com/atselvan/ankiconnect` (AnkiConnect Go wrapper)
-  - [ ] 1.8 Add dependencies: `go get gopkg.in/yaml.v3` (YAML config parsing)
-  - [ ] 1.9 Add test dependencies: `go get github.com/stretchr/testify` (testing assertions and mocks)
-  - [ ] 1.10 Run `go mod tidy` to clean up dependencies
+- [x] 1.0 Set up Go project structure and dependencies
+  - [x] 1.1 Initialize Go module with `go mod init github.com/yourusername/sync` (adjust username as needed)
+  - [x] 1.2 Create directory structure: `cmd/sync/`, `internal/cli/`, `internal/config/`, `internal/state/`, `internal/sheets/`, `internal/anki/`, `internal/sync/`, `internal/mapper/`, `pkg/models/`, `testdata/`
+  - [x] 1.3 Add dependencies: `go get github.com/spf13/cobra@latest` (CLI framework)
+  - [x] 1.4 Add dependencies: `go get github.com/spf13/pflag@latest` (CLI flags)
+  - [x] 1.5 Add dependencies: `go get google.golang.org/api/sheets/v4` (Google Sheets API)
+  - [x] 1.6 Add dependencies: `go get golang.org/x/oauth2` (OAuth2 support)
+  - [x] 1.7 Add dependencies: `go get github.com/atselvan/ankiconnect` (AnkiConnect Go wrapper)
+  - [x] 1.8 Add dependencies: `go get gopkg.in/yaml.v3` (YAML config parsing)
+  - [x] 1.9 Add test dependencies: `go get github.com/stretchr/testify` (testing assertions and mocks)
+  - [x] 1.10 Run `go mod tidy` to clean up dependencies
 
 - [ ] 2.0 Implement domain models and core types
   - [ ] 2.1 Create `pkg/models/card.go` with VocabCard struct: RowNumber (int), AnkiID (int64), StoredChecksum (string), English (string), Greek (string), PartOfSpeech (string), Attributes (string), Examples (string), Tag (string), SubTag1 (string), SubTag2 (string), ModifiedAt (time.Time)
