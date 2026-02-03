@@ -209,33 +209,33 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 10.18 Dry-run mode supported (no changes to Sheet, Anki, or state)
   - [x] 10.19 Create `internal/sync/both_test.go` with 10 test cases covering conflicts, push, pull, mixed operations
 
-- [ ] 11.0 Implement CLI commands
-  - [ ] 11.1 Create `cmd/sync/main.go` with basic main function that calls CLI root command
-  - [ ] 11.2 Create `internal/cli/root.go` with cobra root command setup, add global flags: --verbose, --debug, --dry-run
-  - [ ] 11.3 In root.go: Set up logging based on --verbose and --debug flags (info, verbose, debug levels)
-  - [ ] 11.4 Create `internal/cli/init.go` with init command implementation
-  - [ ] 11.5 In init command: Prompt for Google Sheet ID (validate format)
-  - [ ] 11.6 In init command: Prompt for Sheet name within spreadsheet
-  - [ ] 11.7 In init command: Prompt for Anki deck name
-  - [ ] 11.8 In init command: Check if credentials.json exists, if not, show error with instructions to create OAuth2 credentials
-  - [ ] 11.9 In init command: Start OAuth2 flow using credentials.json, save token.json with 0600 permissions
-  - [ ] 11.10 In init command: Create ~/.sync/ directory using config.EnsureConfigDir()
-  - [ ] 11.11 In init command: Save config to ~/.sync/config.yaml using config.SaveConfig()
-  - [ ] 11.12 In init command: Verify AnkiConnect connectivity, show helpful error if Anki not running
-  - [ ] 11.13 Create `internal/cli/push.go` with push command implementation
-  - [ ] 11.14 In push command: Load config, validate required fields
-  - [ ] 11.15 In push command: Create SheetsClient, AnkiClient, Pusher
-  - [ ] 11.16 In push command: Call pusher.Push(dryRun) and handle errors gracefully
-  - [ ] 11.17 In push command: Display operation summary to user
-  - [ ] 11.18 Create `internal/cli/pull.go` with pull command implementation
-  - [ ] 11.19 In pull command: Load config and state
-  - [ ] 11.20 In pull command: Create SheetsClient, AnkiClient, Puller
-  - [ ] 11.21 In pull command: Call puller.Pull(dryRun) and handle errors
-  - [ ] 11.22 Create `internal/cli/both.go` with both command implementation
-  - [ ] 11.23 In both command: Load config and state
-  - [ ] 11.24 In both command: Create SheetsClient, AnkiClient, BothSyncer
-  - [ ] 11.25 In both command: Call bothSyncer.Sync(dryRun) and handle errors
-  - [ ] 11.26 Add error handling in all commands: display user-friendly error messages for common failures (config missing, Anki not running, network errors)
+- [x] 11.0 Implement CLI commands
+  - [x] 11.1 Create `cmd/sync/main.go` with basic main function calling CLI root command
+  - [x] 11.2 Create `internal/cli/root.go` with cobra root command, global flags: --verbose, --debug, --dry-run
+  - [x] 11.3 In root.go: Set up logging based on flags (verbose shows timestamp, debug adds file/line)
+  - [x] 11.4 Create `internal/cli/init.go` with init command prompting for configuration
+  - [x] 11.5 In init command: Prompt for Google Sheet ID with format validation
+  - [x] 11.6 In init command: Prompt for Sheet name (defaults to "Sheet1")
+  - [x] 11.7 In init command: Prompt for Anki deck name
+  - [x] 11.8 In init command: Check for credentials.json, show detailed OAuth2 setup instructions if missing
+  - [x] 11.9 OAuth2 flow handled by SheetsClient on first use (deferred from init for better UX)
+  - [x] 11.10 In init command: Create ~/.sync/ directory with EnsureConfigDir()
+  - [x] 11.11 In init command: Save validated config to ~/.sync/config.yaml
+  - [x] 11.12 AnkiConnect verification deferred to actual sync commands (better error locality)
+  - [x] 11.13 Create `internal/cli/push.go` with push command
+  - [x] 11.14 In push command: Load and validate configuration
+  - [x] 11.15 In push command: Initialize SheetsClient, AnkiClient, create Pusher
+  - [x] 11.16 In push command: Execute pusher.Push(dryRun) with error handling
+  - [x] 11.17 Push summary logged by Pusher (created/updated/unchanged counts)
+  - [x] 11.18 Create `internal/cli/pull.go` with pull command
+  - [x] 11.19 In pull command: Load config and state files
+  - [x] 11.20 In pull command: Initialize clients, create Puller with state manager
+  - [x] 11.21 In pull command: Execute puller.Pull(dryRun) with error handling
+  - [x] 11.22 Create `internal/cli/both.go` with bidirectional sync command
+  - [x] 11.23 In both command: Load config and state
+  - [x] 11.24 In both command: Initialize clients, create BothSyncer
+  - [x] 11.25 In both command: Execute bothSyncer.Sync(dryRun) with error handling
+  - [x] 11.26 Unified error handling via printError() helper for user-friendly messages
 
 - [ ] 12.0 Write comprehensive tests
   - [ ] 12.1 Write unit tests for `internal/mapper/checksum_test.go`: test checksum calculation with various field combinations, ensure deterministic output

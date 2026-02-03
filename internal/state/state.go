@@ -83,3 +83,22 @@ func CalculateConfigHash(config *models.Config) (string, error) {
 	// Return as hex string
 	return fmt.Sprintf("%x", hash), nil
 }
+
+// Manager implements the StateManager interface for loading and saving sync state.
+type Manager struct{}
+
+// LoadState implements StateManager.LoadState
+func (m *Manager) LoadState(path string) (*models.SyncState, error) {
+	return LoadState(path)
+}
+
+// SaveState implements StateManager.SaveState
+func (m *Manager) SaveState(state *models.SyncState, path string) error {
+	return SaveState(state, path)
+}
+
+// GetDefaultStatePath implements StateManager.GetDefaultStatePath
+func (m *Manager) GetDefaultStatePath() string {
+	path, _ := GetDefaultStatePath()
+	return path
+}
