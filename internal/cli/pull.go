@@ -47,19 +47,14 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return printError("failed to load state: %w", err)
 	}
 
-	// Get paths
+	// Get service account credentials path
 	credentialsPath, err := config.GetDefaultCredentialsPath()
 	if err != nil {
 		return printError("failed to get credentials path: %w", err)
 	}
 
-	tokenPath, err := config.GetDefaultTokenPath()
-	if err != nil {
-		return printError("failed to get token path: %w", err)
-	}
-
-	// Initialize Google Sheets client
-	sheetsClient, err := sheets.NewSheetsClient(credentialsPath, tokenPath)
+	// Initialize Google Sheets client (tokenPath not needed for service accounts)
+	sheetsClient, err := sheets.NewSheetsClient(credentialsPath, "")
 	if err != nil {
 		return printError("failed to initialize Sheets client: %w", err)
 	}

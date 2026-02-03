@@ -19,9 +19,8 @@ go.work
 .env
 .env.local
 
-# Google OAuth credentials and tokens
-credentials.json
-token.json
+# Google Service Account key (sensitive!)
+service-account.json
 
 # User configuration (contains sensitive paths)
 config.yaml

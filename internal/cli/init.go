@@ -51,21 +51,26 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return printError("failed to create config directory: %w", err)
 	}
 
-	// Check for credentials.json
+	// Check for service account key
 	credentialsPath, err := config.GetDefaultCredentialsPath()
 	if err != nil {
 		return printError("failed to get credentials path: %w", err)
 	}
 	if _, err := os.Stat(credentialsPath); os.IsNotExist(err) {
-		fmt.Println("\n⚠️  Warning: credentials.json not found")
+		fmt.Println("\n⚠️  Warning: service account key file not found")
 		fmt.Printf("Expected location: %s\n", credentialsPath)
-		fmt.Println("\nTo create OAuth2 credentials:")
+		fmt.Println("\nTo create a service account (much simpler than OAuth2!):")
 		fmt.Println("1. Go to https://console.cloud.google.com/")
 		fmt.Println("2. Create a new project or select an existing one")
 		fmt.Println("3. Enable the Google Sheets API")
-		fmt.Println("4. Create OAuth2 credentials (Desktop app)")
-		fmt.Println("5. Download the credentials and save as credentials.json")
-		fmt.Printf("6. Move credentials.json to %s\n\n", credentialsPath)
+		fmt.Println("4. Go to IAM & Admin → Service Accounts")
+		fmt.Println("5. Create Service Account (any name works)")
+		fmt.Println("6. Click on the service account → Keys → Add Key → Create New Key → JSON")
+		fmt.Println("7. Download the JSON key file")
+		fmt.Printf("8. Move it to %s\n", credentialsPath)
+		fmt.Println("9. **IMPORTANT**: Share your Google Sheet with the service account email")
+		fmt.Println("   (the email looks like: your-service@project.iam.gserviceaccount.com)")
+		fmt.Println()
 	}
 
 	reader := bufio.NewReader(os.Stdin)

@@ -2,12 +2,10 @@ package sheets
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
-	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
@@ -26,33 +24,28 @@ type SheetsClient struct {
 	ctx     context.Context
 }
 
-// NewSheetsClient creates a new Google Sheets client with OAuth2 authentication.
-// If token.json doesn't exist, it starts the OAuth2 authorization flow.
-// The token is saved with 0600 permissions for security.
+// NewSheetsClient creates a new Google Sheets client using service account authentication.
+// This is simpler than OAuth2 - just need a service account JSON key file.
+// No browser authorization required!
+//
+// The tokenPath parameter is ignored (kept for API compatibility).
 func NewSheetsClient(credentialsPath, tokenPath string) (*SheetsClient, error) {
 	ctx := context.Background()
 
-	// Read credentials file
+	// Read service account credentials file
 	credentials, err := os.ReadFile(credentialsPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read credentials file %s: %w (create OAuth2 credentials in Google Cloud Console)", credentialsPath, err)
+		return nil, fmt.Errorf("failed to read service account key file %s: %w", credentialsPath, err)
 	}
 
-	// Parse credentials
-	config, err := google.ConfigFromJSON(credentials, sheets.SpreadsheetsScope)
+	// Create credentials from service account JSON
+	creds, err := google.CredentialsFromJSON(ctx, credentials, sheets.SpreadsheetsScope)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse credentials: %w", err)
-	}
-
-	// Get OAuth2 token
-	token, err := getToken(tokenPath, config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get OAuth2 token: %w", err)
+		return nil, fmt.Errorf("failed to parse service account credentials: %w (make sure this is a service account key file)", err)
 	}
 
 	// Create Sheets service
-	client := config.Client(ctx, token)
-	service, err := sheets.NewService(ctx, option.WithHTTPClient(client))
+	service, err := sheets.NewService(ctx, option.WithCredentials(creds))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Sheets service: %w", err)
 	}
@@ -63,73 +56,7 @@ func NewSheetsClient(credentialsPath, tokenPath string) (*SheetsClient, error) {
 	}, nil
 }
 
-// getToken retrieves an OAuth2 token from file or initiates OAuth2 flow.
-func getToken(tokenPath string, config *oauth2.Config) (*oauth2.Token, error) {
-	// Try to load existing token
-	token, err := loadToken(tokenPath)
-	if err == nil {
-		return token, nil
-	}
-
-	// Token doesn't exist, start OAuth flow
-	token, err = getTokenFromWeb(config)
-	if err != nil {
-		return nil, err
-	}
-
-	// Save token with 0600 permissions (read/write for owner only)
-	if err := saveToken(tokenPath, token); err != nil {
-		return nil, fmt.Errorf("failed to save token: %w", err)
-	}
-
-	return token, nil
-}
-
-// loadToken reads an OAuth2 token from file.
-func loadToken(path string) (*oauth2.Token, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	token := &oauth2.Token{}
-	if err := json.NewDecoder(file).Decode(token); err != nil {
-		return nil, err
-	}
-
-	return token, nil
-}
-
-// saveToken writes an OAuth2 token to file with 0600 permissions.
-func saveToken(path string, token *oauth2.Token) error {
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return json.NewEncoder(file).Encode(token)
-}
-
-// getTokenFromWeb initiates the OAuth2 authorization flow.
-func getTokenFromWeb(config *oauth2.Config) (*oauth2.Token, error) {
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Go to the following link in your browser:\n%v\n", authURL)
-	fmt.Print("Enter authorization code: ")
-
-	var authCode string
-	if _, err := fmt.Scan(&authCode); err != nil {
-		return nil, fmt.Errorf("failed to read authorization code: %w", err)
-	}
-
-	token, err := config.Exchange(context.Background(), authCode)
-	if err != nil {
-		return nil, fmt.Errorf("failed to exchange authorization code: %w", err)
-	}
-
-	return token, nil
-}
+// Note: OAuth2 functions removed - now using simpler service account authentication
 
 // ReadSheet fetches all rows from a Google Sheet.
 // Returns rows as a 2D slice of interface{} values.

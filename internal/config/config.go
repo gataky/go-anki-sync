@@ -35,24 +35,14 @@ func GetDefaultConfigPath() (string, error) {
 	return filepath.Join(configDir, configFileName), nil
 }
 
-// GetDefaultCredentialsPath returns the default path to the Google OAuth2 credentials file.
+// GetDefaultCredentialsPath returns the default path to the service account key file.
 func GetDefaultCredentialsPath() (string, error) {
 	configDir, err := GetConfigDir()
 	if err != nil {
 		return "", err
 	}
 
-	return filepath.Join(configDir, "credentials.json"), nil
-}
-
-// GetDefaultTokenPath returns the default path to the Google OAuth2 token file.
-func GetDefaultTokenPath() (string, error) {
-	configDir, err := GetConfigDir()
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Join(configDir, "token.json"), nil
+	return filepath.Join(configDir, "service-account.json"), nil
 }
 
 // EnsureConfigDir creates the configuration directory (~/.sync/) if it doesn't exist.

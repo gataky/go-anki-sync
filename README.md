@@ -21,11 +21,12 @@ A bidirectional sync tool for managing vocabulary flashcards between Google Shee
 2. **Anki with AnkiConnect**:
    - Install Anki from [apps.ankiweb.net](https://apps.ankiweb.net/)
    - Install AnkiConnect add-on: Code `2055492159`
-3. **Google Cloud Project**:
+3. **Google Service Account** (much simpler than OAuth2!):
    - Create a project at [console.cloud.google.com](https://console.cloud.google.com/)
    - Enable the Google Sheets API
-   - Create OAuth2 credentials (Desktop app type)
-   - Download `credentials.json`
+   - Create a Service Account (IAM & Admin → Service Accounts)
+   - Download the JSON key file
+   - **Share your Google Sheet with the service account email**
 
 ### Build from Source
 
@@ -37,7 +38,21 @@ go build -o sync ./cmd/sync
 
 ## Quick Start
 
-### 1. Initialize Configuration
+### 1. Set Up Google Service Account
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com/)
+2. Create/select a project
+3. Enable Google Sheets API
+4. Go to **IAM & Admin → Service Accounts**
+5. Click **Create Service Account** (any name works)
+6. Click on the service account → **Keys** → **Add Key** → **Create New Key** → **JSON**
+7. Download the JSON key file
+8. Move it to `~/.sync/service-account.json`
+9. **CRITICAL**: Open your Google Sheet and click **Share**
+   - Add the service account email (looks like `your-service@project.iam.gserviceaccount.com`)
+   - Give it **Editor** permissions
+
+### 2. Initialize Configuration
 
 ```bash
 ./sync init
@@ -49,9 +64,7 @@ You'll be prompted for:
 - **Sheet Name**: The tab name within your spreadsheet (default: "Sheet1")
 - **Anki Deck Name**: The deck you want to sync to
 
-Place your `credentials.json` in `~/.sync/`
-
-### 2. First Push (Sheets → Anki)
+### 3. First Push (Sheets → Anki)
 
 ```bash
 # Preview what will be synced
@@ -61,9 +74,9 @@ Place your `credentials.json` in `~/.sync/`
 ./sync push
 ```
 
-On first run, you'll be prompted to authorize access to your Google Sheet in your browser.
+No browser authorization needed - service accounts work automatically!
 
-### 3. Pull Changes (Anki → Sheets)
+### 4. Pull Changes (Anki → Sheets)
 
 ```bash
 # Preview changes from Anki
@@ -73,7 +86,7 @@ On first run, you'll be prompted to authorize access to your Google Sheet in you
 ./sync pull
 ```
 
-### 4. Bidirectional Sync
+### 5. Bidirectional Sync
 
 ```bash
 # Sync in both directions with conflict resolution
@@ -167,6 +180,8 @@ anki_connect_url: "http://localhost:8765"
 log_level: "info"
 ```
 
+Service account credentials: `~/.sync/service-account.json`
+
 State (timestamps) is stored in `~/.sync/state.json`:
 
 ```json
@@ -231,24 +246,28 @@ Tags are hierarchical using Anki's `::` separator:
 
 Run `./sync init` to create the configuration.
 
-### "Credentials.json not found"
+### "Service account key file not found"
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com/)
-2. Create OAuth2 credentials (Desktop app)
-3. Download as `credentials.json`
-4. Move to `~/.sync/credentials.json`
+2. Go to IAM & Admin → Service Accounts
+3. Create Service Account
+4. Download JSON key
+5. Move to `~/.sync/service-account.json`
+
+### "Failed to read sheet" or "Permission denied"
+
+**Make sure you shared the Google Sheet with your service account email!**
+
+1. Open your Google Sheet
+2. Click **Share**
+3. Add the service account email (from the JSON key file: `client_email` field)
+4. Give it **Editor** permissions
+
+This is the most common mistake - the service account needs explicit access.
 
 ### "Required columns missing"
 
 Your Google Sheet must have at minimum: English, Greek, and Part of Speech columns.
-
-### OAuth Browser Issues
-
-If the OAuth flow doesn't open a browser:
-1. The tool will print a URL
-2. Copy and paste it into your browser manually
-3. Authorize access
-4. Copy the authorization code back to the terminal
 
 ## Development
 
