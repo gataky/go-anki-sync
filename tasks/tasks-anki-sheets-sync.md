@@ -98,13 +98,13 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 3.6 Create `internal/config/config_test.go` with tests for loading, saving, and validation
   - [x] 3.7 Add test for missing required config fields (should return validation error)
 
-- [ ] 4.0 Implement state management
-  - [ ] 4.1 Create `internal/state/state.go` with function `LoadState(path string) (*models.SyncState, error)` to read JSON state file
-  - [ ] 4.2 Implement `SaveState(state *models.SyncState, path string) error` to write JSON state file
-  - [ ] 4.3 Implement `GetDefaultStatePath() string` that returns `~/.sync/state.json`
-  - [ ] 4.4 Handle missing state file gracefully (return empty state with zero timestamps, not an error)
-  - [ ] 4.5 Implement `CalculateConfigHash(config *models.Config) string` to detect config changes
-  - [ ] 4.6 Create `internal/state/state_test.go` with tests for state persistence and config hash calculation
+- [x] 4.0 Implement state management
+  - [x] 4.1 Create `internal/state/state.go` with function `LoadState(path string) (*models.SyncState, error)` to read JSON state file
+  - [x] 4.2 Implement `SaveState(state *models.SyncState, path string) error` to write JSON state file
+  - [x] 4.3 Implement `GetDefaultStatePath() string` that returns `~/.sync/state.json`
+  - [x] 4.4 Handle missing state file gracefully (return empty state with zero timestamps, not an error)
+  - [x] 4.5 Implement `CalculateConfigHash(config *models.Config) string` to detect config changes
+  - [x] 4.6 Create `internal/state/state_test.go` with tests for state persistence and config hash calculation
 
 - [ ] 5.0 Implement Google Sheets integration
   - [ ] 5.1 Create `internal/sheets/client.go` with SheetsClient struct containing authenticated Sheets service
