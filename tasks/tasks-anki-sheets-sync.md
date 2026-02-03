@@ -118,18 +118,18 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 5.9 Implement `CreateChecksumColumnIfMissing(sheetID, sheetName string) error` to add Checksum column if it doesn't exist
   - [x] 5.10 Create `internal/sheets/client_test.go` with mocked Sheets API tests for reading and batch updates
 
-- [ ] 6.0 Implement AnkiConnect integration
-  - [ ] 6.1 Create `internal/anki/client.go` with AnkiClient struct
-  - [ ] 6.2 Implement `NewAnkiClient(url string) (*AnkiClient, error)` that validates connectivity to AnkiConnect
-  - [ ] 6.3 Implement `CheckConnection() error` that attempts to reach AnkiConnect and returns helpful error: "Cannot connect to AnkiConnect. Is Anki running? Install: https://ankiweb.net/shared/info/2055492159"
-  - [ ] 6.4 Implement `CreateDeck(deckName string) error` using AnkiConnect createDeck action (idempotent - doesn't fail if deck exists)
-  - [ ] 6.5 Implement `CreateNoteType(modelName string) error` to create "VocabSync" note type with fields: Front, Back, Grammar, Examples, and two card templates (English→Greek, Greek→English)
-  - [ ] 6.6 Implement `AddNote(deckName, modelName string, card *models.VocabCard) (int64, error)` that creates a single card and returns Anki ID
-  - [ ] 6.7 Implement `UpdateNoteFields(noteID int64, card *models.VocabCard) error` that updates card fields without touching review history
-  - [ ] 6.8 Implement `DeleteNote(noteID int64) error` using deleteNotes action
-  - [ ] 6.9 Implement `FindModifiedNotes(deckName string, sinceTimestamp time.Time) ([]int64, error)` using findNotes with "edited:N" query
-  - [ ] 6.10 Implement `GetNotesInfo(noteIDs []int64) ([]*models.VocabCard, error)` using notesInfo action to fetch card details
-  - [ ] 6.11 Create `internal/anki/client_test.go` with mocked AnkiConnect API tests
+- [x] 6.0 Implement AnkiConnect integration
+  - [x] 6.1 Create `internal/anki/client.go` with AnkiClient struct
+  - [x] 6.2 Implement `NewAnkiClient(url string) (*AnkiClient, error)` that validates connectivity to AnkiConnect
+  - [x] 6.3 Implement `CheckConnection() error` that attempts to reach AnkiConnect and returns helpful error: "Cannot connect to AnkiConnect. Is Anki running? Install: https://ankiweb.net/shared/info/2055492159"
+  - [x] 6.4 Implement `CreateDeck(deckName string) error` using AnkiConnect createDeck action (idempotent - doesn't fail if deck exists)
+  - [x] 6.5 Implement `CreateNoteType(modelName string) error` to create "VocabSync" note type with fields: Front, Back, Grammar, Examples, and two card templates (English→Greek, Greek→English)
+  - [x] 6.6 Implement `AddNote(deckName, modelName string, card *models.VocabCard) (int64, error)` that creates a single card and returns Anki ID
+  - [x] 6.7 Implement `UpdateNoteFields(noteID int64, card *models.VocabCard) error` that updates card fields without touching review history
+  - [x] 6.8 Implement `DeleteNote(noteID int64) error` using deleteNotes action
+  - [x] 6.9 Implement `FindModifiedNotes(deckName string, sinceTimestamp time.Time) ([]int64, error)` using findNotes with "edited:N" query
+  - [x] 6.10 Implement `GetNotesInfo(noteIDs []int64) ([]*models.VocabCard, error)` using notesInfo action to fetch card details
+  - [x] 6.11 Create `internal/anki/client_test.go` with mocked AnkiConnect API tests
 
 - [ ] 7.0 Implement field mapping and checksum logic
   - [ ] 7.1 Create `internal/mapper/checksum.go` with function `CalculateChecksum(card *models.VocabCard) string` that computes SHA256 of English|Greek|PartOfSpeech|Attributes|Examples
