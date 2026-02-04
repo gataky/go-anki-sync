@@ -105,7 +105,7 @@ func (m *mockAnkiClient) CheckAudioExists(filename string) (bool, error) {
 	return false, nil
 }
 
-func (m *mockAnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard) error {
+func (m *mockAnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard, audioData []byte, audioFilename string) error {
 	// Check if this update should fail
 	if m.failUpdates != nil && m.failUpdates[noteID] {
 		return fmt.Errorf("mock error: failed to update note %d", noteID)

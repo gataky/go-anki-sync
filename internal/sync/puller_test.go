@@ -31,7 +31,7 @@ func (m *mockPullerAnkiClient) AddNote(deckName, modelName string, card *models.
 	return 0, nil
 }
 
-func (m *mockPullerAnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard) error {
+func (m *mockPullerAnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard, audioData []byte, audioFilename string) error {
 	return nil
 }
 

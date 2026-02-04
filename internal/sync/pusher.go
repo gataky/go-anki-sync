@@ -397,6 +397,9 @@ func (p *Pusher) updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]
 	successCount := 0
 	attemptedCount := 0
 
+	// Check if TTS is enabled
+	ttsEnabled := p.ttsClient != nil && p.config.TextToSpeech != nil && p.config.TextToSpeech.Enabled
+
 	for _, card := range cards {
 		// Check if card has changed
 		if !mapper.HasChanged(card) {
@@ -410,8 +413,29 @@ func (p *Pusher) updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]
 			continue
 		}
 
+		// Generate audio if TTS is enabled (same as for new cards)
+		var audioData []byte
+		var audioFilename string
+		if ttsEnabled {
+			audioData, audioFilename = p.generateAudioForCard(card)
+
+			// Log audio status
+			if audioFilename != "" {
+				if len(audioData) > 0 {
+					p.logger.Printf("Uploading updated audio '%s' for card '%s'", audioFilename, card.English)
+				} else {
+					p.logger.Printf("Linking audio '%s' to updated card '%s'", audioFilename, card.English)
+				}
+			}
+
+			// Add delay between TTS requests if configured (only if we generated new audio)
+			if len(audioData) > 0 && p.config.TextToSpeech.RequestDelayMs > 0 {
+				time.Sleep(time.Duration(p.config.TextToSpeech.RequestDelayMs) * time.Millisecond)
+			}
+		}
+
 		// Update note in Anki
-		if err := p.ankiClient.UpdateNoteFields(card.AnkiID, card); err != nil {
+		if err := p.ankiClient.UpdateNoteFields(card.AnkiID, card, audioData, audioFilename); err != nil {
 			// Log error but continue with remaining cards
 			p.logger.Printf("ERROR: Failed to update card '%s' (Anki ID %d, row %d): %v", card.English, card.AnkiID, card.RowNumber, err)
 			errors = append(errors, fmt.Errorf("row %d ('%s', ID %d): %w", card.RowNumber, card.English, card.AnkiID, err))

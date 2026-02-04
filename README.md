@@ -54,13 +54,16 @@ The tool can automatically generate high-quality audio pronunciation for Greek w
 
 ### How It Works
 
-- **Only for new cards**: Audio is generated only when creating new cards during `push`
+- **Audio for new and updated cards**: Audio is generated when:
+  - Creating new cards during `push`
+  - Updating existing cards during `push` (if Greek text has changed)
 - **Auto-play on Greek side**: When the Greek side of the card is shown, the audio automatically plays
-- **Text + Audio**: The Greek text is displayed along with the audio (`γεια [sound:γεια.mp3]`)
+- **Text + Audio**: The Greek text is displayed along with the audio (`γεια[sound:γεια.mp3]`)
 - **Smart audio generation**: Checks Anki's media folder before generating
-  - If audio exists: Links the existing file to the new card (no TTS API call)
-  - If audio doesn't exist: Generates fresh audio using Google Cloud TTS
-- **Graceful degradation**: If audio generation fails, the card is still created without audio
+  - If audio exists: Links the existing file to the card (no TTS API call, no file upload)
+  - If audio doesn't exist: Generates fresh audio using Google Cloud TTS and uploads it
+- **Single audio attachment**: Each card gets exactly one audio file, no duplicates
+- **Graceful degradation**: If audio generation fails, the card is still created/updated without audio
 - **Sequential processing**: Cards are processed one at a time with configurable delay
 
 ### Supported Voices

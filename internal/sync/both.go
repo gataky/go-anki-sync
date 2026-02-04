@@ -213,7 +213,8 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 
 		// Apply Anki updates
 		for ankiID, card := range ankiUpdates {
-			if err := b.ankiClient.UpdateNoteFields(ankiID, card); err != nil {
+			// Conflict resolution doesn't regenerate audio
+			if err := b.ankiClient.UpdateNoteFields(ankiID, card, nil, ""); err != nil {
 				return fmt.Errorf("failed to update conflicted card %d: %w", ankiID, err)
 			}
 		}

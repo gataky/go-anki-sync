@@ -71,8 +71,16 @@ func (c *AnkiClient) CreateDeck(deckName string) error {
 // CreateNoteType creates the VocabSync note type with fields and card templates.
 // This operation checks if the model already exists before creating.
 func (c *AnkiClient) CreateNoteType(modelName string) error {
-	// Check if model already exists
-	modelList, err := c.client.Models.GetAll()
+	// Check if model already exists (with retry logic)
+	var modelList *[]string
+	err := retryWithBackoff("ListNoteTypes", 3, func() error {
+		var restErr *errors.RestErr
+		modelList, restErr = c.client.Models.GetAll()
+		if restErr != nil {
+			return fmt.Errorf("%s", restErr.Error)
+		}
+		return nil
+	})
 	if err != nil {
 		return fmt.Errorf("failed to list note types: %v", err)
 	}
@@ -149,15 +157,18 @@ func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard,
 	existingID, err := c.findNoteByEnglishGreek(deckName, card.English, card.Greek)
 	if err == nil && existingID > 0 {
 		// Card already exists - update its fields and return the ID
-		if err := c.UpdateNoteFields(existingID, card); err != nil {
+		if err := c.UpdateNoteFields(existingID, card, audioData, audioFilename); err != nil {
 			return 0, fmt.Errorf("found existing card but failed to update it: %w", err)
 		}
 		return existingID, nil
 	}
 
-	// Build Back field - add sound tag if audio filename provided
+	// Build Back field
+	// Only add sound tag manually if we're linking to existing audio (no audioData to upload)
+	// When uploading new audio, AnkiConnect will automatically add the sound tag via Audio.Fields
 	backField := card.Greek
-	if audioFilename != "" {
+	if audioFilename != "" && len(audioData) == 0 {
+		// Linking to existing audio file - add sound tag manually
 		backField = fmt.Sprintf("%s [sound:%s]", card.Greek, audioFilename)
 	}
 
@@ -252,11 +263,28 @@ func (c *AnkiClient) findNoteByEnglishGreek(deckName, english, greek string) (in
 }
 
 // UpdateNoteFields updates the fields of an existing note without touching review history.
-func (c *AnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard) error {
+// If audioData is provided, uploads new audio. If only audioFilename is provided, links to existing audio.
+func (c *AnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard, audioData []byte, audioFilename string) error {
+	// Build Back field with audio if provided
+	backField := card.Greek
+	if audioFilename != "" {
+		if len(audioData) > 0 {
+			// New audio being uploaded - store it first, AnkiConnect will add the sound tag
+			if err := c.StoreAudioFile(audioFilename, audioData); err != nil {
+				return fmt.Errorf("failed to store audio file: %w", err)
+			}
+			// Add sound tag manually since we're updating fields directly
+			backField = fmt.Sprintf("%s [sound:%s]", card.Greek, audioFilename)
+		} else {
+			// Linking to existing audio
+			backField = fmt.Sprintf("%s [sound:%s]", card.Greek, audioFilename)
+		}
+	}
+
 	// Build updated fields
 	fields := ankiconnect.Fields{
 		"Front":    card.English,
-		"Back":     card.Greek,
+		"Back":     backField,
 		"Grammar":  buildGrammarField(card.PartOfSpeech, card.Attributes),
 		"Examples": formatExamplesHTML(card.Examples),
 	}
@@ -288,10 +316,19 @@ func (c *AnkiClient) DeleteNote(noteID int64) error {
 }
 
 // CheckAudioExists checks if an audio file exists in Anki's media collection.
+// Note: This method is not currently used as we check the filesystem directly for better performance.
 func (c *AnkiClient) CheckAudioExists(filename string) (bool, error) {
-	fileNames, restErr := c.client.Media.GetMediaFileNames(filename)
-	if restErr != nil {
-		return false, fmt.Errorf("failed to check audio existence: %s", restErr.Error)
+	var fileNames *[]string
+	err := retryWithBackoff("CheckAudioExists", 3, func() error {
+		var restErr *errors.RestErr
+		fileNames, restErr = c.client.Media.GetMediaFileNames(filename)
+		if restErr != nil {
+			return fmt.Errorf("%s", restErr.Error)
+		}
+		return nil
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to check audio existence: %v", err)
 	}
 
 	if fileNames == nil || len(*fileNames) == 0 {
@@ -313,10 +350,16 @@ func (c *AnkiClient) StoreAudioFile(filename string, audioData []byte) error {
 	// Convert to base64
 	encodedData := base64.StdEncoding.EncodeToString(audioData)
 
-	// Store via AnkiConnect
-	_, restErr := c.client.Media.StoreMediaFile(filename, encodedData)
-	if restErr != nil {
-		return fmt.Errorf("failed to store audio file '%s': %s", filename, restErr.Error)
+	// Store via AnkiConnect with retry logic
+	err := retryWithBackoff("StoreAudioFile", 3, func() error {
+		_, restErr := c.client.Media.StoreMediaFile(filename, encodedData)
+		if restErr != nil {
+			return fmt.Errorf("%s", restErr.Error)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to store audio file '%s' after retries: %v", filename, err)
 	}
 
 	return nil

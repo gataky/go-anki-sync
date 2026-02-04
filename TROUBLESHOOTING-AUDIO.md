@@ -32,16 +32,34 @@ If the `text_to_speech` section is missing or `enabled: false`, audio won't be g
 Look for these log messages:
 
 #### ✅ Good signs:
+
+**New cards with fresh audio:**
 ```
 TTS client initialized successfully
 Generated audio for 'γεια' (XXXX bytes)
 Uploading and attaching audio 'γεια.mp3' to card 'hello'
 Created card 'hello' with Anki ID 123456789
+```
 
-# Or if audio already exists:
+**New cards with existing audio:**
+```
 Audio already exists for 'γεια', linking to card
 Linking existing audio 'γεια.mp3' to card 'hello'
 Created card 'hello' with Anki ID 123456789
+```
+
+**Updated cards with new/changed Greek text:**
+```
+Generated audio for 'νέο' (XXXX bytes)
+Uploading updated audio 'νέο.mp3' for card 'new'
+Updated card 'new' (Anki ID 123456789)
+```
+
+**Updated cards with existing audio:**
+```
+Audio already exists for 'νέο', linking to card
+Linking audio 'νέο.mp3' to updated card 'new'
+Updated card 'new' (Anki ID 123456789)
 ```
 
 #### ❌ Problem indicators:
