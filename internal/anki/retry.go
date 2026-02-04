@@ -44,7 +44,7 @@ func retryWithBackoff(operation string, maxAttempts int, fn func() error) error 
 		delay = delay + jitter - (delay / 4)
 
 		// Log retry attempt (would be picked up by logger if verbose mode enabled)
-		fmt.Printf("Retry %d/%d for %s after %v: %v\n", attempt, maxAttempts, operation, delay, err)
+		// fmt.Printf("Retry %d/%d for %s after %v: %v\n", attempt, maxAttempts, operation, delay, err)
 		time.Sleep(delay)
 	}
 
