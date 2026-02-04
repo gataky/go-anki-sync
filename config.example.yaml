@@ -1,0 +1,17 @@
+google_sheet_id: 1p39Sbnkx3G4swoSPJ2KKVKu-VwteKmaAQ9toFadd5cA
+sheet_name: words
+anki_deck: Greek
+anki_connect_url: http://localhost:8765
+anki_profile: "User 1"
+google_token_path: ""
+log_level: verbose
+
+# Greek audio generation with Google Cloud TTS
+text_to_speech:
+  enabled: true
+  voice_name: "el-GR-Wavenet-A"
+  audio_encoding: "MP3"
+  speaking_rate: 1.0
+  pitch: 0.0
+  volume_gain_db: 0.0
+  request_delay_ms: 100
