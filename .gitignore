@@ -43,3 +43,5 @@ build/
 docs/
 .direnv/
 .claude/
+
+sync

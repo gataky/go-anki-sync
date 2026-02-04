@@ -31,6 +31,36 @@ type Config struct {
 
 	// LogLevel controls logging verbosity: "info", "verbose", or "debug"
 	LogLevel string `yaml:"log_level"`
+
+	// AnkiProfile is the Anki profile name (default: "User 1")
+	AnkiProfile string `yaml:"anki_profile,omitempty"`
+
+	// TextToSpeech configuration for Greek audio generation
+	TextToSpeech *TTSConfig `yaml:"text_to_speech,omitempty"`
+}
+
+// TTSConfig holds configuration for Google Cloud Text-to-Speech API.
+type TTSConfig struct {
+	// Enabled controls whether audio generation is active
+	Enabled bool `yaml:"enabled"`
+
+	// VoiceName is the Google TTS voice (e.g., "el-GR-Wavenet-A")
+	VoiceName string `yaml:"voice_name"`
+
+	// AudioEncoding is the output format (e.g., "MP3")
+	AudioEncoding string `yaml:"audio_encoding"`
+
+	// SpeakingRate is the speed (0.25 to 4.0, default 1.0)
+	SpeakingRate float64 `yaml:"speaking_rate,omitempty"`
+
+	// Pitch is the voice pitch (-20.0 to 20.0, default 0.0)
+	Pitch float64 `yaml:"pitch,omitempty"`
+
+	// VolumeGainDb is the volume gain in dB (-96.0 to 16.0, default 0.0)
+	VolumeGainDb float64 `yaml:"volume_gain_db,omitempty"`
+
+	// RequestDelayMs is the delay between API calls to avoid rate limiting
+	RequestDelayMs int `yaml:"request_delay_ms,omitempty"`
 }
 
 // Validate checks that all required configuration fields are present and valid.
@@ -73,6 +103,10 @@ func (c *Config) SetDefaults() {
 
 	if c.LogLevel == "" {
 		c.LogLevel = DefaultLogLevel
+	}
+
+	if c.AnkiProfile == "" {
+		c.AnkiProfile = "User 1"
 	}
 }
 

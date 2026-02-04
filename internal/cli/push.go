@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 	"github.com/yourusername/sync/internal/anki"
 	"github.com/yourusername/sync/internal/config"
 	"github.com/yourusername/sync/internal/sheets"
 	"github.com/yourusername/sync/internal/sync"
+	"github.com/yourusername/sync/internal/tts"
 )
 
 var pushCmd = &cobra.Command{
@@ -54,8 +57,22 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return printError("failed to initialize Anki client: %w", err)
 	}
 
+	// Initialize TTS client if enabled
+	var ttsClient *tts.TTSClient
+	if cfg.TextToSpeech != nil && cfg.TextToSpeech.Enabled {
+		ctx := context.Background()
+		ttsClient, err = tts.NewTTSClient(ctx, credentialsPath, cfg.TextToSpeech)
+		if err != nil {
+			return printError("failed to initialize TTS client: %w", err)
+		}
+		defer ttsClient.Close()
+		logger.Println("TTS client initialized successfully")
+	} else {
+		logger.Println("TTS is disabled, skipping audio generation")
+	}
+
 	// Create pusher
-	pusher := sync.NewPusher(sheetsClient, ankiClient, cfg, logger)
+	pusher := sync.NewPusher(sheetsClient, ankiClient, cfg, logger, ttsClient)
 
 	// Execute push
 	if err := pusher.Push(dryRun); err != nil {

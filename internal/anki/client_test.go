@@ -205,9 +205,29 @@ func TestFormatExamplesHTML(t *testing.T) {
 			expected: "",
 		},
 		{
-			name:     "simple examples",
+			name:     "single example",
 			examples: "Example 1",
 			expected: "Example 1",
+		},
+		{
+			name:     "multiple examples with newlines",
+			examples: "this is an example\nand this is another",
+			expected: "<ol style='text-align: left; margin: 10px auto; display: inline-block;'><li>this is an example</li><li>and this is another</li></ol>",
+		},
+		{
+			name:     "multiple examples with empty lines",
+			examples: "First example\n\nSecond example\n\n",
+			expected: "<ol style='text-align: left; margin: 10px auto; display: inline-block;'><li>First example</li><li>Second example</li></ol>",
+		},
+		{
+			name:     "whitespace only",
+			examples: "   \n\t\n   ",
+			expected: "",
+		},
+		{
+			name:     "three examples",
+			examples: "Example one\nExample two\nExample three",
+			expected: "<ol style='text-align: left; margin: 10px auto; display: inline-block;'><li>Example one</li><li>Example two</li><li>Example three</li></ol>",
 		},
 	}
 
@@ -335,3 +355,13 @@ func TestParseGrammarFieldEdgeCases(t *testing.T) {
 		})
 	}
 }
+
+// Note: Tests for audio-related methods (CheckAudioExists, StoreAudioFile, AddNote with audio)
+// would require integration testing with a running Anki instance.
+//
+// The AddNote method signature now includes audioData []byte parameter.
+// Integration tests should verify:
+// - AddNote with nil audioData behaves as before (no audio attachment)
+// - AddNote with non-nil audioData properly attaches audio to the note
+// - AddNote properly encodes audio data to base64
+// - AddNote sets correct filename and field ("Back") for audio attachment

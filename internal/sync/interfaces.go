@@ -18,6 +18,13 @@ type SheetsClientInterface interface {
 type AnkiClientInterface interface {
 	CreateDeck(deckName string) error
 	CreateNoteType(modelName string) error
-	AddNote(deckName, modelName string, card *models.VocabCard) (int64, error)
+	AddNote(deckName, modelName string, card *models.VocabCard, audioData []byte, audioFilename string) (int64, error)
 	UpdateNoteFields(noteID int64, card *models.VocabCard) error
+	CheckAudioExists(filename string) (bool, error)
+}
+
+// TTSClientInterface defines the methods needed from the TTS client.
+type TTSClientInterface interface {
+	GenerateAudio(greekText string) ([]byte, error)
+	Close() error
 }

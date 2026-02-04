@@ -27,12 +27,16 @@ func (m *mockPullerAnkiClient) CreateNoteType(modelName string) error {
 	return nil
 }
 
-func (m *mockPullerAnkiClient) AddNote(deckName, modelName string, card *models.VocabCard) (int64, error) {
+func (m *mockPullerAnkiClient) AddNote(deckName, modelName string, card *models.VocabCard, audioData []byte, audioFilename string) (int64, error) {
 	return 0, nil
 }
 
 func (m *mockPullerAnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard) error {
 	return nil
+}
+
+func (m *mockPullerAnkiClient) CheckAudioExists(filename string) (bool, error) {
+	return false, nil
 }
 
 func (m *mockPullerAnkiClient) FindModifiedNotes(deckName string, sinceTimestamp time.Time) ([]int64, error) {

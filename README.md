@@ -10,10 +10,79 @@ A bidirectional sync tool for managing vocabulary flashcards between Google Shee
 - **Checksum-based Change Detection**: Only syncs cards that have actually changed
 - **Conflict Resolution**: Timestamp-based last-write-wins strategy
 - **Dry-run Mode**: Preview changes before applying them
+- **Greek Audio Generation**: Automatic text-to-speech audio for Greek words using Google Cloud TTS
 - **Three Sync Modes**:
   - `push`: Google Sheets → Anki
   - `pull`: Anki → Google Sheets
   - `both`: Bidirectional with conflict resolution
+
+## Greek Audio Generation (Text-to-Speech)
+
+The tool can automatically generate high-quality audio pronunciation for Greek words using Google Cloud Text-to-Speech.
+
+### Requirements
+
+1. **Google Cloud Project** with Text-to-Speech API enabled
+2. **Service Account** with `roles/cloudtts.user` role
+3. Same service account JSON key file used for Sheets access
+
+### Setup
+
+1. Enable the Cloud Text-to-Speech API in your Google Cloud project:
+   ```bash
+   # In Google Cloud Console
+   https://console.cloud.google.com/apis/library/texttospeech.googleapis.com
+   ```
+
+2. Add the `Cloud Text-to-Speech User` role to your service account:
+   - Go to IAM & Admin → IAM
+   - Find your service account
+   - Click Edit → Add Another Role
+   - Select `Cloud Text-to-Speech User`
+
+3. Add TTS configuration to `~/.sync/config.yaml`:
+   ```yaml
+   text_to_speech:
+     enabled: true
+     voice_name: "el-GR-Wavenet-A"  # Greek voice
+     audio_encoding: "MP3"
+     speaking_rate: 1.0              # 0.25 to 4.0
+     pitch: 0.0                      # -20.0 to 20.0
+     volume_gain_db: 0.0             # -96.0 to 16.0
+     request_delay_ms: 100           # Delay between TTS requests
+   ```
+
+### How It Works
+
+- **Only for new cards**: Audio is generated only when creating new cards during `push`
+- **Auto-play on Greek side**: When the Greek side of the card is shown, the audio automatically plays
+- **Text + Audio**: The Greek text is displayed along with the audio (`γεια [sound:γεια.mp3]`)
+- **Smart audio generation**: Checks Anki's media folder before generating
+  - If audio exists: Links the existing file to the new card (no TTS API call)
+  - If audio doesn't exist: Generates fresh audio using Google Cloud TTS
+- **Graceful degradation**: If audio generation fails, the card is still created without audio
+- **Sequential processing**: Cards are processed one at a time with configurable delay
+
+### Supported Voices
+
+Google Cloud TTS supports multiple Greek voices:
+- `el-GR-Wavenet-A` (recommended) - High quality WaveNet voice
+- `el-GR-Standard-A` - Standard quality voice
+
+### Troubleshooting
+
+**"Failed to initialize TTS client"**
+- Verify Text-to-Speech API is enabled in Google Cloud Console
+- Check that your service account has the `roles/cloudtts.user` role
+- Ensure your service account JSON key file is valid
+
+**"Audio generation failed"**
+- Check your Google Cloud quota for TTS requests
+- Verify the Greek text is not empty
+- Try increasing `request_delay_ms` if hitting rate limits
+
+**Disabling Audio Generation**
+Set `enabled: false` in the `text_to_speech` config or remove the section entirely.
 
 ## Installation
 
@@ -107,17 +176,31 @@ Your spreadsheet should have these columns (order doesn't matter):
 | Greek | Yes | Greek translation |
 | Part of Speech | Yes | Noun, Verb, Adjective, etc. |
 | Attributes | No | Gender, verb class, etc. |
-| Examples | No | Usage examples |
+| Examples | No | Usage examples (multiple lines become numbered list) |
 | Tag | No | Top-level tag |
 | Sub-Tag 1 | No | Second-level tag |
 | Sub-Tag 2 | No | Third-level tag |
+
+**Examples Field Formatting:**
+- Single example: Displays as plain text
+- Multiple examples: Use newlines to separate; displays as a numbered list in Anki
+- Example in sheet cell:
+  ```
+  This is the first example
+  This is the second example
+  This is the third example
+  ```
+- Result in Anki:
+  1. This is the first example
+  2. This is the second example
+  3. This is the third example
 
 ### Example
 
 | Anki ID | Checksum | English | Greek | Part of Speech | Attributes | Examples | Tag | Sub-Tag 1 | Sub-Tag 2 |
 |---------|----------|---------|-------|----------------|------------|----------|-----|-----------|-----------|
-|  | | hello | γεια | Interjection | Informal | Hello, how are you? | Greetings | Basic | |
-|  | | house | σπίτι | Noun | Neuter | This is my house. | City | Buildings | Residential |
+|  | | hello | γεια | Interjection | Informal | Hello, how are you?<br>Γεια σου! | Greetings | Basic | |
+|  | | house | σπίτι | Noun | Neuter | This is my house.<br>Where is your house? | City | Buildings | Residential |
 
 ## Command Reference
 
@@ -179,7 +262,18 @@ google_sheet_id: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
 sheet_name: "Sheet1"
 anki_deck: "Greek"
 anki_connect_url: "http://localhost:8765"
+anki_profile: "User 1"  # Your Anki profile name (default: "User 1")
 log_level: "info"
+
+# Optional: Greek audio generation with Google Cloud TTS
+text_to_speech:
+  enabled: true
+  voice_name: "el-GR-Wavenet-A"
+  audio_encoding: "MP3"
+  speaking_rate: 1.0
+  pitch: 0.0
+  volume_gain_db: 0.0
+  request_delay_ms: 100
 ```
 
 Service account credentials: `~/.sync/service-account.json`

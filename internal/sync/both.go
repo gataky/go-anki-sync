@@ -40,7 +40,7 @@ func NewBothSyncer(
 	stateManager StateManager,
 	logger *log.Logger,
 ) *BothSyncer {
-	pusher := NewPusher(sheetsClient, ankiClient, config, logger)
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
 
 	return &BothSyncer{
@@ -195,7 +195,8 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 			} else {
 				// Update Sheet from Anki (build cell updates)
 				mapper.UpdateChecksum(conflict.AnkiCard)
-				rowNum := conflict.SheetCard.RowNumber
+				// Note: CellUpdate.Row is 1-indexed excluding header, so subtract 1 from sheet row number
+				rowNum := conflict.SheetCard.RowNumber - 1
 				sheetUpdates = append(sheetUpdates,
 					sheets.CellUpdate{Row: rowNum, Column: "B", Value: conflict.AnkiCard.StoredChecksum},
 					sheets.CellUpdate{Row: rowNum, Column: "C", Value: conflict.AnkiCard.English},
@@ -249,16 +250,17 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 			}
 
 			mapper.UpdateChecksum(ankiCard)
+			// Note: CellUpdate.Row is 1-indexed excluding header, so subtract 1 from sheet row number
 			pullUpdates = append(pullUpdates,
-				sheets.CellUpdate{Row: rowNum, Column: "B", Value: ankiCard.StoredChecksum},
-				sheets.CellUpdate{Row: rowNum, Column: "C", Value: ankiCard.English},
-				sheets.CellUpdate{Row: rowNum, Column: "D", Value: ankiCard.Greek},
-				sheets.CellUpdate{Row: rowNum, Column: "E", Value: ankiCard.PartOfSpeech},
-				sheets.CellUpdate{Row: rowNum, Column: "F", Value: ankiCard.Attributes},
-				sheets.CellUpdate{Row: rowNum, Column: "G", Value: ankiCard.Examples},
-				sheets.CellUpdate{Row: rowNum, Column: "H", Value: ankiCard.Tag},
-				sheets.CellUpdate{Row: rowNum, Column: "I", Value: ankiCard.SubTag1},
-				sheets.CellUpdate{Row: rowNum, Column: "J", Value: ankiCard.SubTag2},
+				sheets.CellUpdate{Row: rowNum - 1, Column: "B", Value: ankiCard.StoredChecksum},
+				sheets.CellUpdate{Row: rowNum - 1, Column: "C", Value: ankiCard.English},
+				sheets.CellUpdate{Row: rowNum - 1, Column: "D", Value: ankiCard.Greek},
+				sheets.CellUpdate{Row: rowNum - 1, Column: "E", Value: ankiCard.PartOfSpeech},
+				sheets.CellUpdate{Row: rowNum - 1, Column: "F", Value: ankiCard.Attributes},
+				sheets.CellUpdate{Row: rowNum - 1, Column: "G", Value: ankiCard.Examples},
+				sheets.CellUpdate{Row: rowNum - 1, Column: "H", Value: ankiCard.Tag},
+				sheets.CellUpdate{Row: rowNum - 1, Column: "I", Value: ankiCard.SubTag1},
+				sheets.CellUpdate{Row: rowNum - 1, Column: "J", Value: ankiCard.SubTag2},
 			)
 			pulledCount++
 		}

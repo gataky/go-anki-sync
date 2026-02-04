@@ -1,11 +1,13 @@
 package anki
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/atselvan/ankiconnect"
+	"github.com/privatesquare/bkst-go-utils/utils/errors"
 	"github.com/yourusername/sync/pkg/models"
 )
 
@@ -53,8 +55,14 @@ func (c *AnkiClient) CheckConnection() error {
 // CreateDeck creates a new deck in Anki.
 // This operation is idempotent - it won't fail if the deck already exists.
 func (c *AnkiClient) CreateDeck(deckName string) error {
-	if err := c.client.Decks.Create(deckName); err != nil {
-		return fmt.Errorf("failed to create deck %s: %v", deckName, err)
+	err := retryWithBackoff("CreateDeck", 3, func() error {
+		if restErr := c.client.Decks.Create(deckName); restErr != nil {
+			return fmt.Errorf("%s", restErr.Error)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create deck %s after retries: %v", deckName, err)
 	}
 
 	return nil
@@ -118,28 +126,45 @@ small {
 		CardTemplates: cardTemplates,
 	}
 
-	if err := c.client.Models.Create(model); err != nil {
-		return fmt.Errorf("failed to create note type %s: %v", modelName, err)
+	if err := retryWithBackoff("CreateNoteType", 3, func() error {
+		if restErr := c.client.Models.Create(model); restErr != nil {
+			return fmt.Errorf("%s", restErr.Error)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to create note type %s after retries: %v", modelName, err)
 	}
 
 	return nil
 }
 
 // AddNote creates a single note in Anki and returns the generated note ID.
-// Checks for duplicates using English+Greek combination before adding.
-func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard) (int64, error) {
+// If a note with the same English+Greek combination already exists, updates it and returns that ID.
+// This allows linking sheet rows to existing Anki cards.
+// If audioData is provided, uploads and attaches audio. If audioFilename is provided (even with nil audioData),
+// adds [sound:filename] tag to reference existing audio file.
+func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard, audioData []byte, audioFilename string) (int64, error) {
 	// Check for existing note with same English + Greek
-	// This allows multiple entries with same English but different Greek
-	// e.g., "when" (όταν) and "when" (πότε) are both valid
+	// If found, update it and return the existing ID to allow linking
 	existingID, err := c.findNoteByEnglishGreek(deckName, card.English, card.Greek)
 	if err == nil && existingID > 0 {
-		return 0, fmt.Errorf("duplicate card already exists: %s → %s (Anki ID: %d)", card.English, card.Greek, existingID)
+		// Card already exists - update its fields and return the ID
+		if err := c.UpdateNoteFields(existingID, card); err != nil {
+			return 0, fmt.Errorf("found existing card but failed to update it: %w", err)
+		}
+		return existingID, nil
+	}
+
+	// Build Back field - add sound tag if audio filename provided
+	backField := card.Greek
+	if audioFilename != "" {
+		backField = fmt.Sprintf("%s [sound:%s]", card.Greek, audioFilename)
 	}
 
 	// Build fields from card
 	fields := ankiconnect.Fields{
 		"Front":    card.English,
-		"Back":     card.Greek,
+		"Back":     backField,
 		"Grammar":  buildGrammarField(card.PartOfSpeech, card.Attributes),
 		"Examples": formatExamplesHTML(card.Examples),
 	}
@@ -147,16 +172,44 @@ func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard)
 	// Build tags
 	tags := buildTags(card.Tag, card.SubTag1, card.SubTag2)
 
-	// Create note
+	// Create note with options to allow duplicate Front fields
+	// This allows multiple entries with same English but different Greek
 	note := ankiconnect.Note{
 		DeckName:  deckName,
 		ModelName: modelName,
 		Fields:    fields,
 		Tags:      tags,
+		Options: &ankiconnect.Options{
+			AllowDuplicate: true,
+		},
 	}
 
-	if err := c.client.Notes.Add(note); err != nil {
-		return 0, fmt.Errorf("failed to add note: %v", err)
+	// Add audio if provided
+	if len(audioData) > 0 {
+		filename := fmt.Sprintf("%s.mp3", card.Greek)
+
+		// Convert to base64 for ankiconnect
+		encodedData := base64.StdEncoding.EncodeToString(audioData)
+
+		note.Audio = []ankiconnect.Audio{
+			{
+				Data:     encodedData,
+				Filename: filename,
+				Fields:   []string{"Back"}, // AnkiConnect will append [sound:filename] to Back field
+			},
+		}
+
+		// Note: AnkiConnect automatically appends [sound:filename.mp3] to the Back field
+		// The final Back field will be: "γεια[sound:γεια.mp3]"
+	}
+
+	if err := retryWithBackoff("AddNote", 3, func() error {
+		if restErr := c.client.Notes.Add(note); restErr != nil {
+			return fmt.Errorf("%s", restErr.Error)
+		}
+		return nil
+	}); err != nil {
+		return 0, fmt.Errorf("failed to add note after retries: %v", err)
 	}
 
 	// Retrieve the note ID by searching for English + Greek
@@ -173,11 +226,21 @@ func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard)
 // Returns the note ID if found, or 0 if not found.
 func (c *AnkiClient) findNoteByEnglishGreek(deckName, english, greek string) (int64, error) {
 	// Search by both Front (English) and Back (Greek) fields
+	// Use wildcard for Back field to match both "greek" and "greek [sound:...]"
 	// This ensures uniqueness is based on the combination
-	query := fmt.Sprintf(`deck:"%s" "Front:%s" "Back:%s"`, deckName, english, greek)
-	noteIDs, err := c.client.Notes.Search(query)
+	query := fmt.Sprintf(`deck:"%s" "Front:%s" "Back:%s*"`, deckName, english, greek)
+
+	var noteIDs *[]int64
+	err := retryWithBackoff("SearchNote", 3, func() error {
+		var restErr *errors.RestErr
+		noteIDs, restErr = c.client.Notes.Search(query)
+		if restErr != nil {
+			return fmt.Errorf("%s", restErr.Error)
+		}
+		return nil
+	})
 	if err != nil {
-		return 0, fmt.Errorf("search failed: %v", err)
+		return 0, fmt.Errorf("search failed after retries: %v", err)
 	}
 
 	if noteIDs == nil || len(*noteIDs) == 0 {
@@ -204,8 +267,13 @@ func (c *AnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard) erro
 		Fields: fields,
 	}
 
-	if err := c.client.Notes.Update(updateNote); err != nil {
-		return fmt.Errorf("failed to update note %d: %v", noteID, err)
+	if err := retryWithBackoff("UpdateNote", 3, func() error {
+		if restErr := c.client.Notes.Update(updateNote); restErr != nil {
+			return fmt.Errorf("%s", restErr.Error)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to update note %d after retries: %v", noteID, err)
 	}
 
 	return nil
@@ -217,6 +285,41 @@ func (c *AnkiClient) DeleteNote(noteID int64) error {
 	// The ankiconnect library doesn't expose deleteNotes, so we'll need to work around this
 	// For now, return an error indicating this functionality needs implementation
 	return fmt.Errorf("delete note functionality not yet implemented in ankiconnect library")
+}
+
+// CheckAudioExists checks if an audio file exists in Anki's media collection.
+func (c *AnkiClient) CheckAudioExists(filename string) (bool, error) {
+	fileNames, restErr := c.client.Media.GetMediaFileNames(filename)
+	if restErr != nil {
+		return false, fmt.Errorf("failed to check audio existence: %s", restErr.Error)
+	}
+
+	if fileNames == nil || len(*fileNames) == 0 {
+		return false, nil
+	}
+
+	// Check if exact filename match exists
+	for _, name := range *fileNames {
+		if name == filename {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// StoreAudioFile stores an audio file in Anki's media collection.
+func (c *AnkiClient) StoreAudioFile(filename string, audioData []byte) error {
+	// Convert to base64
+	encodedData := base64.StdEncoding.EncodeToString(audioData)
+
+	// Store via AnkiConnect
+	_, restErr := c.client.Media.StoreMediaFile(filename, encodedData)
+	if restErr != nil {
+		return fmt.Errorf("failed to store audio file '%s': %s", filename, restErr.Error)
+	}
+
+	return nil
 }
 
 // FindModifiedNotes finds notes that have been modified since the given timestamp.
@@ -231,9 +334,17 @@ func (c *AnkiClient) FindModifiedNotes(deckName string, sinceTimestamp time.Time
 	// Build query: deck:"DeckName" edited:N
 	query := fmt.Sprintf(`deck:"%s" edited:%d`, deckName, daysSince)
 
-	noteIDs, err := c.client.Notes.Search(query)
+	var noteIDs *[]int64
+	err := retryWithBackoff("FindModifiedNotes", 3, func() error {
+		var restErr *errors.RestErr
+		noteIDs, restErr = c.client.Notes.Search(query)
+		if restErr != nil {
+			return fmt.Errorf("%s", restErr.Error)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to find modified notes: %v", err)
+		return nil, fmt.Errorf("failed to find modified notes after retries: %v", err)
 	}
 
 	if noteIDs == nil {
@@ -257,9 +368,17 @@ func (c *AnkiClient) GetNotesInfo(noteIDs []int64) ([]*models.VocabCard, error) 
 	}
 	query := strings.Join(queryParts, " OR ")
 
-	notesInfo, err := c.client.Notes.Get(query)
+	var notesInfo *[]ankiconnect.ResultNotesInfo
+	err := retryWithBackoff("GetNotesInfo", 3, func() error {
+		var restErr *errors.RestErr
+		notesInfo, restErr = c.client.Notes.Get(query)
+		if restErr != nil {
+			return fmt.Errorf("%s", restErr.Error)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get notes info: %v", err)
+		return nil, fmt.Errorf("failed to get notes info after retries: %v", err)
 	}
 
 	if notesInfo == nil {
@@ -299,14 +418,43 @@ func buildGrammarField(partOfSpeech, attributes string) string {
 }
 
 // formatExamplesHTML converts examples text to HTML format.
+// Takes newline-separated examples and returns a numbered HTML list.
 func formatExamplesHTML(examples string) string {
 	if examples == "" {
 		return ""
 	}
 
-	// For now, return as-is. The mapper package will handle the actual formatting.
-	// This is a simple pass-through that will be enhanced by the mapper.
-	return examples
+	// Split by newlines and filter empty lines
+	lines := strings.Split(examples, "\n")
+	var validLines []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			validLines = append(validLines, trimmed)
+		}
+	}
+
+	// If no valid lines, return empty
+	if len(validLines) == 0 {
+		return ""
+	}
+
+	// If only one line, return it without list formatting
+	if len(validLines) == 1 {
+		return validLines[0]
+	}
+
+	// Multiple lines: create numbered list
+	var html strings.Builder
+	html.WriteString("<ol style='text-align: left; margin: 10px auto; display: inline-block;'>")
+	for _, line := range validLines {
+		html.WriteString("<li>")
+		html.WriteString(line)
+		html.WriteString("</li>")
+	}
+	html.WriteString("</ol>")
+
+	return html.String()
 }
 
 // buildTags constructs hierarchical tags from tag fields.

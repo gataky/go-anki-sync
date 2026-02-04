@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -21,6 +22,7 @@ type mockSheetsClient struct {
 	requiredColumnsErr  error
 	checksumColumnAdded bool
 	batchUpdates        []sheets.CellUpdate
+	lastBatchUpdate     []sheets.CellUpdate // The most recent batch update
 }
 
 func (m *mockSheetsClient) ReadSheet(sheetID, sheetName string) ([][]interface{}, error) {
@@ -45,15 +47,21 @@ func (m *mockSheetsClient) CreateChecksumColumnIfMissing(sheetID, sheetName stri
 
 func (m *mockSheetsClient) BatchUpdateCells(sheetID, sheetName string, updates []sheets.CellUpdate) error {
 	m.batchUpdates = append(m.batchUpdates, updates...)
+	m.lastBatchUpdate = updates // Store the most recent batch
 	return nil
 }
 
 type mockAnkiClient struct {
-	nextNoteID    int64
-	createdNotes  []*models.VocabCard
-	updatedNotes  map[int64]*models.VocabCard
-	deckCreated   string
+	nextNoteID      int64
+	createdNotes    []*models.VocabCard
+	updatedNotes    map[int64]*models.VocabCard
+	deckCreated     string
 	noteTypeCreated string
+	failCards       map[string]bool // Cards that should fail to create (keyed by English)
+	failUpdates     map[int64]bool  // Note IDs that should fail to update
+	deckExists      bool            // If true, CreateDeck returns success without doing anything
+	modelExists     bool            // If true, CreateNoteType returns success without doing anything
+	audioExists     map[string]bool // Audio files that exist (keyed by filename)
 }
 
 func newMockAnkiClient() *mockAnkiClient {
@@ -74,14 +82,35 @@ func (m *mockAnkiClient) CreateNoteType(modelName string) error {
 	return nil
 }
 
-func (m *mockAnkiClient) AddNote(deckName, modelName string, card *models.VocabCard) (int64, error) {
+func (m *mockAnkiClient) AddNote(deckName, modelName string, card *models.VocabCard, audioData []byte, audioFilename string) (int64, error) {
+	// Check if this card should fail
+	if m.failCards != nil && m.failCards[card.English] {
+		return 0, fmt.Errorf("mock error: failed to create card '%s'", card.English)
+	}
+
 	noteID := m.nextNoteID
 	m.nextNoteID++
 	m.createdNotes = append(m.createdNotes, card)
 	return noteID, nil
 }
 
+func (m *mockAnkiClient) CheckAudioExists(filename string) (bool, error) {
+	// Check if audio exists in the map
+	if m.audioExists != nil {
+		if exists, ok := m.audioExists[filename]; ok {
+			return exists, nil
+		}
+	}
+	// Default: audio doesn't exist
+	return false, nil
+}
+
 func (m *mockAnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard) error {
+	// Check if this update should fail
+	if m.failUpdates != nil && m.failUpdates[noteID] {
+		return fmt.Errorf("mock error: failed to update note %d", noteID)
+	}
+
 	m.updatedNotes[noteID] = card
 	return nil
 }
@@ -96,7 +125,7 @@ func TestNewPusher(t *testing.T) {
 	}
 	logger := log.New(os.Stdout, "TEST: ", log.LstdFlags)
 
-	pusher := NewPusher(sheetsClient, ankiClient, config, logger)
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
 	assert.NotNil(t, pusher)
 	assert.Equal(t, sheetsClient, pusher.sheetsClient)
@@ -133,7 +162,7 @@ func TestPush_NewCards(t *testing.T) {
 	}
 	logger := log.New(os.Stdout, "TEST: ", 0)
 
-	pusher := NewPusher(sheetsClient, ankiClient, config, logger)
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
 	// Execute push
 	err := pusher.Push(false)
@@ -201,7 +230,7 @@ func TestPush_ExistingCards_NoChanges(t *testing.T) {
 	}
 	logger := log.New(os.Stdout, "TEST: ", 0)
 
-	pusher := NewPusher(sheetsClient, ankiClient, config, logger)
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
 	err := pusher.Push(false)
 	require.NoError(t, err)
@@ -240,7 +269,7 @@ func TestPush_ExistingCards_WithChanges(t *testing.T) {
 	}
 	logger := log.New(os.Stdout, "TEST: ", 0)
 
-	pusher := NewPusher(sheetsClient, ankiClient, config, logger)
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
 	err := pusher.Push(false)
 	require.NoError(t, err)
@@ -283,7 +312,7 @@ func TestPush_DryRun(t *testing.T) {
 	}
 	logger := log.New(os.Stdout, "TEST: ", 0)
 
-	pusher := NewPusher(sheetsClient, ankiClient, config, logger)
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
 	// Execute dry run
 	err := pusher.Push(true)
@@ -336,7 +365,7 @@ func TestPush_MixedNewAndExisting(t *testing.T) {
 	}
 	logger := log.New(os.Stdout, "TEST: ", 0)
 
-	pusher := NewPusher(sheetsClient, ankiClient, config, logger)
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
 	err := pusher.Push(false)
 	require.NoError(t, err)
@@ -376,7 +405,7 @@ func TestPush_EmptySheet(t *testing.T) {
 	}
 	logger := log.New(os.Stdout, "TEST: ", 0)
 
-	pusher := NewPusher(sheetsClient, ankiClient, config, logger)
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
 	err := pusher.Push(false)
 	require.NoError(t, err)
@@ -410,7 +439,7 @@ func TestPush_InvalidRow(t *testing.T) {
 	}
 	logger := log.New(os.Stdout, "TEST: ", 0)
 
-	pusher := NewPusher(sheetsClient, ankiClient, config, logger)
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
 	// Should fail fast on validation error
 	err := pusher.Push(false)
@@ -488,9 +517,212 @@ func TestUpdateExistingCards(t *testing.T) {
 
 	// Should have 1 update (only changed card)
 	assert.Len(t, updates, 1)
-	assert.Equal(t, 2, updates[0].Row) // Changed card's row
+	// Note: CellUpdate.Row is 1-indexed excluding header, so card RowNumber=2 becomes Row=1
+	assert.Equal(t, 1, updates[0].Row) // Changed card's row
 
 	// Verify only changed card was updated in Anki
 	assert.Len(t, ankiClient.updatedNotes, 1)
 	assert.NotNil(t, ankiClient.updatedNotes[1234567890123])
+}
+
+// Mock TTS client for testing audio generation
+type mockTTSClient struct {
+	audioGenerated map[string][]byte // keyed by Greek text
+	generateError  error             // If set, GenerateAudio returns this error
+}
+
+func newMockTTSClient() *mockTTSClient {
+	return &mockTTSClient{
+		audioGenerated: make(map[string][]byte),
+	}
+}
+
+func (m *mockTTSClient) GenerateAudio(greekText string) ([]byte, error) {
+	if m.generateError != nil {
+		return nil, m.generateError
+	}
+
+	// Generate fake audio data
+	audioData := []byte(fmt.Sprintf("audio-for-%s", greekText))
+	m.audioGenerated[greekText] = audioData
+	return audioData, nil
+}
+
+func (m *mockTTSClient) Close() error {
+	return nil
+}
+
+func TestGenerateAudioForCard_Success(t *testing.T) {
+	config := &models.Config{
+		AnkiDeck: "Greek",
+		TextToSpeech: &models.TTSConfig{
+			Enabled: true,
+		},
+	}
+
+	ankiClient := newMockAnkiClient()
+	ttsClient := newMockTTSClient()
+	logger := log.New(os.Stdout, "TEST: ", 0)
+
+	pusher := &Pusher{
+		ankiClient: ankiClient,
+		ttsClient:  ttsClient,
+		config:     config,
+		logger:     logger,
+	}
+
+	card := &models.VocabCard{
+		English:    "hello",
+		Greek:      "γεια",
+		RowNumber:  2,
+	}
+
+	audioData, _ := pusher.generateAudioForCard(card)
+
+	assert.NotNil(t, audioData)
+	assert.Equal(t, []byte("audio-for-γεια"), audioData)
+	assert.Equal(t, 1, len(ttsClient.audioGenerated))
+}
+
+func TestGenerateAudioForCard_EmptyGreek(t *testing.T) {
+	config := &models.Config{
+		AnkiDeck: "Greek",
+		TextToSpeech: &models.TTSConfig{
+			Enabled: true,
+		},
+	}
+
+	ankiClient := newMockAnkiClient()
+	ttsClient := newMockTTSClient()
+	logger := log.New(os.Stdout, "TEST: ", 0)
+
+	pusher := &Pusher{
+		ankiClient: ankiClient,
+		ttsClient:  ttsClient,
+		config:     config,
+		logger:     logger,
+	}
+
+	card := &models.VocabCard{
+		English:    "hello",
+		Greek:      "",
+		RowNumber:  2,
+	}
+
+	audioData, _ := pusher.generateAudioForCard(card)
+
+	assert.Nil(t, audioData)
+	assert.Equal(t, 0, len(ttsClient.audioGenerated))
+}
+
+// Note: Audio existence check was removed for simplicity.
+// AnkiConnect handles duplicate media files by overwriting them.
+// This avoids API compatibility issues with CheckAudioExists.
+
+func TestGenerateAudioForCard_TTSError(t *testing.T) {
+	config := &models.Config{
+		AnkiDeck: "Greek",
+		TextToSpeech: &models.TTSConfig{
+			Enabled: true,
+		},
+	}
+
+	ankiClient := newMockAnkiClient()
+	ttsClient := newMockTTSClient()
+	ttsClient.generateError = fmt.Errorf("TTS API error")
+	logger := log.New(os.Stdout, "TEST: ", 0)
+
+	pusher := &Pusher{
+		ankiClient: ankiClient,
+		ttsClient:  ttsClient,
+		config:     config,
+		logger:     logger,
+	}
+
+	card := &models.VocabCard{
+		English:    "hello",
+		Greek:      "γεια",
+		RowNumber:  2,
+	}
+
+	audioData, _ := pusher.generateAudioForCard(card)
+
+	// Should return nil on error (graceful degradation)
+	assert.Nil(t, audioData)
+}
+
+func TestCreateNewCards_WithAudio(t *testing.T) {
+	sheetsClient := &mockSheetsClient{}
+	ankiClient := newMockAnkiClient()
+	ttsClient := newMockTTSClient()
+
+	config := &models.Config{
+		AnkiDeck: "Greek",
+		TextToSpeech: &models.TTSConfig{
+			Enabled:          true,
+			RequestDelayMs:   0, // No delay in tests
+		},
+	}
+
+	logger := log.New(os.Stdout, "TEST: ", 0)
+
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, ttsClient)
+
+	cards := []*models.VocabCard{
+		{
+			RowNumber:    2,
+			English:      "hello",
+			Greek:        "γεια",
+			PartOfSpeech: "Interjection",
+		},
+	}
+
+	updates, err := pusher.createNewCards(cards, false)
+
+	require.NoError(t, err)
+	assert.Len(t, updates, 2) // Anki ID + Checksum
+
+	// Verify TTS was called
+	assert.Equal(t, 1, len(ttsClient.audioGenerated))
+	assert.NotNil(t, ttsClient.audioGenerated["γεια"])
+
+	// Verify card was created
+	assert.Len(t, ankiClient.createdNotes, 1)
+}
+
+func TestCreateNewCards_TTSDisabled(t *testing.T) {
+	sheetsClient := &mockSheetsClient{}
+	ankiClient := newMockAnkiClient()
+	ttsClient := newMockTTSClient()
+
+	config := &models.Config{
+		AnkiDeck: "Greek",
+		TextToSpeech: &models.TTSConfig{
+			Enabled: false, // Disabled
+		},
+	}
+
+	logger := log.New(os.Stdout, "TEST: ", 0)
+
+	pusher := NewPusher(sheetsClient, ankiClient, config, logger, ttsClient)
+
+	cards := []*models.VocabCard{
+		{
+			RowNumber:    2,
+			English:      "hello",
+			Greek:        "γεια",
+			PartOfSpeech: "Interjection",
+		},
+	}
+
+	updates, err := pusher.createNewCards(cards, false)
+
+	require.NoError(t, err)
+	assert.Len(t, updates, 2) // Anki ID + Checksum
+
+	// Verify TTS was NOT called
+	assert.Equal(t, 0, len(ttsClient.audioGenerated))
+
+	// Verify card was still created
+	assert.Len(t, ankiClient.createdNotes, 1)
 }

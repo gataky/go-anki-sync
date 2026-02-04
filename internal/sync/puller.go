@@ -136,16 +136,17 @@ func (p *Puller) Pull(dryRun bool) error {
 
 		// Build updates for content fields and checksum
 		// Assuming standard column layout: A=AnkiID, B=Checksum, C=English, D=Greek, E=PartOfSpeech, etc.
+		// Note: CellUpdate.Row is 1-indexed excluding header, so subtract 1 from sheet row number
 		updates = append(updates,
-			sheets.CellUpdate{Row: rowNumber, Column: "B", Value: ankiCard.StoredChecksum},
-			sheets.CellUpdate{Row: rowNumber, Column: "C", Value: ankiCard.English},
-			sheets.CellUpdate{Row: rowNumber, Column: "D", Value: ankiCard.Greek},
-			sheets.CellUpdate{Row: rowNumber, Column: "E", Value: ankiCard.PartOfSpeech},
-			sheets.CellUpdate{Row: rowNumber, Column: "F", Value: ankiCard.Attributes},
-			sheets.CellUpdate{Row: rowNumber, Column: "G", Value: ankiCard.Examples},
-			sheets.CellUpdate{Row: rowNumber, Column: "H", Value: ankiCard.Tag},
-			sheets.CellUpdate{Row: rowNumber, Column: "I", Value: ankiCard.SubTag1},
-			sheets.CellUpdate{Row: rowNumber, Column: "J", Value: ankiCard.SubTag2},
+			sheets.CellUpdate{Row: rowNumber - 1, Column: "B", Value: ankiCard.StoredChecksum},
+			sheets.CellUpdate{Row: rowNumber - 1, Column: "C", Value: ankiCard.English},
+			sheets.CellUpdate{Row: rowNumber - 1, Column: "D", Value: ankiCard.Greek},
+			sheets.CellUpdate{Row: rowNumber - 1, Column: "E", Value: ankiCard.PartOfSpeech},
+			sheets.CellUpdate{Row: rowNumber - 1, Column: "F", Value: ankiCard.Attributes},
+			sheets.CellUpdate{Row: rowNumber - 1, Column: "G", Value: ankiCard.Examples},
+			sheets.CellUpdate{Row: rowNumber - 1, Column: "H", Value: ankiCard.Tag},
+			sheets.CellUpdate{Row: rowNumber - 1, Column: "I", Value: ankiCard.SubTag1},
+			sheets.CellUpdate{Row: rowNumber - 1, Column: "J", Value: ankiCard.SubTag2},
 		)
 	}
 
