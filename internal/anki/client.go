@@ -95,19 +95,19 @@ func (c *AnkiClient) CreateNoteType(modelName string) error {
 	}
 
 	// Define fields
-	fields := []string{"Front", "Back", "Grammar", "Examples"}
+	fields := []string{"Front", "Back", "PartOfSpeech", "Grammar", "Examples"}
 
 	// Define card templates
 	cardTemplates := []ankiconnect.CardTemplate{
 		{
 			Name:  "English to Greek",
-			Front: "{{Front}}",
-			Back:  "{{Back}}<br><br><small>{{Grammar}}</small><br><br>{{Examples}}",
+			Front: "{{Front}} <small>({{PartOfSpeech}})</small>",
+			Back:  "{{Front}} <small>({{PartOfSpeech}})</small><hr>{{Back}}<br><br><small>{{Grammar}}</small><br><br>{{Examples}}",
 		},
 		{
 			Name:  "Greek to English",
-			Front: "{{Back}}",
-			Back:  "{{Front}}<br><br><small>{{Grammar}}</small><br><br>{{Examples}}",
+			Front: "{{Back}} <small>({{PartOfSpeech}})</small>",
+			Back:  "{{Back}} <small>({{PartOfSpeech}})</small><hr>{{Front}}<br><br><small>{{Grammar}}</small><br><br>{{Examples}}",
 		},
 	}
 
