@@ -441,7 +441,17 @@ func (c *AnkiClient) GetNotesInfo(noteIDs []int64) ([]*models.VocabCard, error) 
 		}
 
 		// Parse Grammar field back to PartOfSpeech and Attributes
-		parseGrammarField(noteInfo.Fields["Grammar"].Value, card)
+		// Only parse PartOfSpeech from Grammar if the dedicated field is empty (backward compatibility)
+		grammarValue := noteInfo.Fields["Grammar"].Value
+		if card.PartOfSpeech == "" {
+			parseGrammarField(grammarValue, card)
+		} else {
+			// PartOfSpeech field exists, only extract Attributes from Grammar
+			// Still call parseGrammarField but save/restore PartOfSpeech
+			savedPartOfSpeech := card.PartOfSpeech
+			parseGrammarField(grammarValue, card)
+			card.PartOfSpeech = savedPartOfSpeech // Restore the dedicated field value
+		}
 
 		// Store examples as-is (HTML format)
 		card.Examples = noteInfo.Fields["Examples"].Value
