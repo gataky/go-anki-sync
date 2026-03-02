@@ -284,10 +284,11 @@ func (c *AnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard, audi
 
 	// Build updated fields
 	fields := ankiconnect.Fields{
-		"Front":    card.English,
-		"Back":     backField,
-		"Grammar":  buildGrammarField(card.PartOfSpeech, card.Attributes),
-		"Examples": formatExamplesHTML(card.Examples),
+		"Front":        card.English,
+		"Back":         backField,
+		"PartOfSpeech": card.PartOfSpeech,
+		"Grammar":      buildGrammarField(card.PartOfSpeech, card.Attributes),
+		"Examples":     formatExamplesHTML(card.Examples),
 	}
 
 	// Update note
