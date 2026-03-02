@@ -174,10 +174,11 @@ func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard,
 
 	// Build fields from card
 	fields := ankiconnect.Fields{
-		"Front":    card.English,
-		"Back":     backField,
-		"Grammar":  buildGrammarField(card.PartOfSpeech, card.Attributes),
-		"Examples": formatExamplesHTML(card.Examples),
+		"Front":        card.English,
+		"Back":         backField,
+		"PartOfSpeech": card.PartOfSpeech,
+		"Grammar":      buildGrammarField(card.PartOfSpeech, card.Attributes),
+		"Examples":     formatExamplesHTML(card.Examples),
 	}
 
 	// Build tags
