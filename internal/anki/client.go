@@ -433,10 +433,11 @@ func (c *AnkiClient) GetNotesInfo(noteIDs []int64) ([]*models.VocabCard, error) 
 	cards := make([]*models.VocabCard, 0, len(*notesInfo))
 	for _, noteInfo := range *notesInfo {
 		card := &models.VocabCard{
-			AnkiID:     noteInfo.NoteId,
-			English:    noteInfo.Fields["Front"].Value,
-			Greek:      noteInfo.Fields["Back"].Value,
-			ModifiedAt: time.Now(), // Note: ankiconnect library doesn't expose modification time
+			AnkiID:       noteInfo.NoteId,
+			English:      noteInfo.Fields["Front"].Value,
+			Greek:        noteInfo.Fields["Back"].Value,
+			PartOfSpeech: noteInfo.Fields["PartOfSpeech"].Value,
+			ModifiedAt:   time.Now(), // Note: ankiconnect library doesn't expose modification time
 		}
 
 		// Parse Grammar field back to PartOfSpeech and Attributes
