@@ -1,13 +1,13 @@
 package sync
 
 import (
-	"log"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yourusername/sync/internal/logging"
 	"github.com/yourusername/sync/internal/mapper"
 	"github.com/yourusername/sync/pkg/models"
 )
@@ -78,7 +78,7 @@ func TestNewPuller(t *testing.T) {
 	}
 	state := &models.SyncState{}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", log.LstdFlags)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -104,7 +104,7 @@ func TestPull_NoModifiedNotes(t *testing.T) {
 		LastPullTimestamp: time.Now().Add(-1 * time.Hour),
 	}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -177,7 +177,7 @@ func TestPull_WithModifiedNotes(t *testing.T) {
 		LastPullTimestamp: time.Now().Add(-1 * time.Hour),
 	}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -244,7 +244,7 @@ func TestPull_NoteNotFoundInSheet(t *testing.T) {
 		LastPullTimestamp: time.Now().Add(-1 * time.Hour),
 	}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -297,7 +297,7 @@ func TestPull_DryRun(t *testing.T) {
 		LastPullTimestamp: time.Now().Add(-1 * time.Hour),
 	}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -367,7 +367,7 @@ func TestPull_MultipleModifiedNotes(t *testing.T) {
 		LastPullTimestamp: time.Now().Add(-1 * time.Hour),
 	}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -410,7 +410,7 @@ func TestPull_FirstPull_DefaultTimestamp(t *testing.T) {
 		LastPullTimestamp: time.Time{},
 	}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
 

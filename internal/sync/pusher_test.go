@@ -2,13 +2,13 @@ package sync
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yourusername/sync/internal/anki"
+	"github.com/yourusername/sync/internal/logging"
 	"github.com/yourusername/sync/internal/mapper"
 	"github.com/yourusername/sync/internal/sheets"
 	"github.com/yourusername/sync/pkg/models"
@@ -123,7 +123,7 @@ func TestNewPusher(t *testing.T) {
 		SheetName:     "Vocabulary",
 		AnkiDeck:      "Greek",
 	}
-	logger := log.New(os.Stdout, "TEST: ", log.LstdFlags)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
@@ -160,7 +160,7 @@ func TestPush_NewCards(t *testing.T) {
 		SheetName:     "Vocabulary",
 		AnkiDeck:      "Greek",
 	}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
@@ -228,7 +228,7 @@ func TestPush_ExistingCards_NoChanges(t *testing.T) {
 		SheetName:     "Vocabulary",
 		AnkiDeck:      "Greek",
 	}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
@@ -267,7 +267,7 @@ func TestPush_ExistingCards_WithChanges(t *testing.T) {
 		SheetName:     "Vocabulary",
 		AnkiDeck:      "Greek",
 	}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
@@ -310,7 +310,7 @@ func TestPush_DryRun(t *testing.T) {
 		SheetName:     "Vocabulary",
 		AnkiDeck:      "Greek",
 	}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
@@ -363,7 +363,7 @@ func TestPush_MixedNewAndExisting(t *testing.T) {
 		SheetName:     "Vocabulary",
 		AnkiDeck:      "Greek",
 	}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
@@ -403,7 +403,7 @@ func TestPush_EmptySheet(t *testing.T) {
 		SheetName:     "Vocabulary",
 		AnkiDeck:      "Greek",
 	}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
@@ -437,7 +437,7 @@ func TestPush_InvalidRow(t *testing.T) {
 		SheetName:     "Vocabulary",
 		AnkiDeck:      "Greek",
 	}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 
@@ -453,7 +453,7 @@ func TestCreateNewCards(t *testing.T) {
 	config := &models.Config{
 		AnkiDeck: "Greek",
 	}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := &Pusher{
 		ankiClient: ankiClient,
@@ -483,7 +483,7 @@ func TestCreateNewCards(t *testing.T) {
 
 func TestUpdateExistingCards(t *testing.T) {
 	ankiClient := newMockAnkiClient()
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := &Pusher{
 		ankiClient: ankiClient,
@@ -562,7 +562,7 @@ func TestGenerateAudioForCard_Success(t *testing.T) {
 
 	ankiClient := newMockAnkiClient()
 	ttsClient := newMockTTSClient()
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := &Pusher{
 		ankiClient: ankiClient,
@@ -594,7 +594,7 @@ func TestGenerateAudioForCard_EmptyGreek(t *testing.T) {
 
 	ankiClient := newMockAnkiClient()
 	ttsClient := newMockTTSClient()
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := &Pusher{
 		ankiClient: ankiClient,
@@ -630,7 +630,7 @@ func TestGenerateAudioForCard_TTSError(t *testing.T) {
 	ankiClient := newMockAnkiClient()
 	ttsClient := newMockTTSClient()
 	ttsClient.generateError = fmt.Errorf("TTS API error")
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := &Pusher{
 		ankiClient: ankiClient,
@@ -664,7 +664,7 @@ func TestCreateNewCards_WithAudio(t *testing.T) {
 		},
 	}
 
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, ttsClient)
 
@@ -702,7 +702,7 @@ func TestCreateNewCards_TTSDisabled(t *testing.T) {
 		},
 	}
 
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, ttsClient)
 

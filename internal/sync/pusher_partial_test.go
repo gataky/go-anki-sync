@@ -1,19 +1,19 @@
 package sync
 
 import (
-	"log"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yourusername/sync/internal/logging"
 	"github.com/yourusername/sync/internal/mapper"
 	"github.com/yourusername/sync/pkg/models"
 )
 
 // TestCreateNewCards_PartialFailure tests that partial results are written even when some cards fail
 func TestCreateNewCards_PartialFailure(t *testing.T) {
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	// Create mock client that fails on specific cards
 	ankiClient := &mockAnkiClient{
@@ -60,7 +60,7 @@ func TestCreateNewCards_PartialFailure(t *testing.T) {
 
 // TestUpdateExistingCards_PartialFailure tests that partial results are written even when some updates fail
 func TestUpdateExistingCards_PartialFailure(t *testing.T) {
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	// Create mock client that fails on specific note IDs
 	ankiClient := &mockAnkiClient{
@@ -134,7 +134,7 @@ func TestUpdateExistingCards_PartialFailure(t *testing.T) {
 
 // TestPush_WritesPartialResultsOnError tests that the main Push function writes partial results
 func TestPush_WritesPartialResultsOnError(t *testing.T) {
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	// Create mock client that fails on specific cards
 	ankiClient := &mockAnkiClient{

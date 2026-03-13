@@ -25,8 +25,8 @@ func init() {
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
-	logger := getLogger()
-	logger.Println("Initializing sync configuration...")
+	logger := newSyncLogger()
+	logger.Info("Initializing sync configuration...")
 
 	// Check if config already exists
 	configPath, err := config.GetDefaultConfigPath()
@@ -41,7 +41,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		response, _ := reader.ReadString('\n')
 		response = strings.TrimSpace(strings.ToLower(response))
 		if response != "y" && response != "yes" {
-			logger.Println("Initialization cancelled")
+			logger.Info("Initialization cancelled")
 			return nil
 		}
 	}
@@ -131,12 +131,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return printError("failed to save configuration: %w", err)
 	}
 
-	logger.Printf("Configuration saved to %s", configPath)
-	logger.Println("\nNext steps:")
-	logger.Println("1. Ensure Anki is running with AnkiConnect installed")
-	logger.Println("2. Run 'sync push' to push cards from Sheet to Anki")
-	logger.Println("3. Run 'sync pull' to pull changes from Anki to Sheet")
-	logger.Println("4. Run 'sync both' for bidirectional sync")
+	logger.Info("Configuration saved to %s", configPath)
+	logger.Info("\nNext steps:")
+	logger.Info("1. Ensure Anki is running with AnkiConnect installed")
+	logger.Info("2. Run 'sync push' to push cards from Sheet to Anki")
+	logger.Info("3. Run 'sync pull' to pull changes from Anki to Sheet")
+	logger.Info("4. Run 'sync both' for bidirectional sync")
 
 	return nil
 }

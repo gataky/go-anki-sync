@@ -23,7 +23,7 @@ func init() {
 }
 
 func runPull(cmd *cobra.Command, args []string) error {
-	logger := getLogger()
+	logger := newSyncLogger()
 	dryRun := getDryRun()
 
 	// Load configuration

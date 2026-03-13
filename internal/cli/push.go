@@ -25,7 +25,7 @@ func init() {
 }
 
 func runPush(cmd *cobra.Command, args []string) error {
-	logger := getLogger()
+	logger := newSyncLogger()
 	dryRun := getDryRun()
 
 	// Load configuration
@@ -66,9 +66,9 @@ func runPush(cmd *cobra.Command, args []string) error {
 			return printError("failed to initialize TTS client: %w", err)
 		}
 		defer ttsClient.Close()
-		logger.Println("TTS client initialized successfully")
+		logger.Info("TTS client initialized successfully")
 	} else {
-		logger.Println("TTS is disabled, skipping audio generation")
+		logger.Info("TTS is disabled, skipping audio generation")
 	}
 
 	// Create pusher

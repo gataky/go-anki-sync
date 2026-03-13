@@ -2,9 +2,9 @@ package sync
 
 import (
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/yourusername/sync/internal/logging"
 	"github.com/yourusername/sync/internal/mapper"
 	"github.com/yourusername/sync/internal/sheets"
 	"github.com/yourusername/sync/pkg/models"
@@ -28,7 +28,7 @@ type BothSyncer struct {
 	config       *models.Config
 	state        *models.SyncState
 	stateManager StateManager
-	logger       *log.Logger
+	logger       *logging.SyncLogger
 }
 
 // NewBothSyncer creates a new BothSyncer instance.
@@ -38,7 +38,7 @@ func NewBothSyncer(
 	config *models.Config,
 	state *models.SyncState,
 	stateManager StateManager,
-	logger *log.Logger,
+	logger *logging.SyncLogger,
 ) *BothSyncer {
 	pusher := NewPusher(sheetsClient, ankiClient, config, logger, nil)
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -58,7 +58,7 @@ func NewBothSyncer(
 // Sync executes bidirectional sync with conflict resolution.
 // If dryRun is true, no changes are made to Sheet, Anki, or state.
 func (b *BothSyncer) Sync(dryRun bool) error {
-	b.logger.Println("Starting bidirectional sync (Sheets ↔ Anki)")
+	b.logger.Info("Starting bidirectional sync (Sheets ↔ Anki)")
 
 	// Read Sheet data
 	rows, err := b.sheetsClient.ReadSheet(b.config.GoogleSheetID, b.config.SheetName)
@@ -81,14 +81,14 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 
 		card, err := mapper.RowToCard(row, headers, i+1)
 		if err != nil {
-			b.logger.Printf("Warning: skipping invalid row %d: %v", i+1, err)
+			b.logger.Info("Warning: skipping invalid row %d: %v", i+1, err)
 			continue
 		}
 
 		sheetCards = append(sheetCards, card)
 	}
 
-	b.logger.Printf("Loaded %d cards from Sheet", len(sheetCards))
+	b.logger.Info("Loaded %d cards from Sheet", len(sheetCards))
 
 	// Query Anki for modified notes since last pull
 	lastPullTime := b.state.LastPullTimestamp
@@ -107,13 +107,13 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 		if err != nil {
 			return fmt.Errorf("failed to get notes info: %w", err)
 		}
-		b.logger.Printf("Found %d modified notes in Anki", len(ankiCards))
+		b.logger.Info("Found %d modified notes in Anki", len(ankiCards))
 	}
 
 	// Detect conflicts (cards modified in both systems)
 	conflicts := b.detectConflicts(sheetCards, ankiCards)
 	if len(conflicts) > 0 {
-		b.logger.Printf("Detected %d conflicts", len(conflicts))
+		b.logger.Info("Detected %d conflicts", len(conflicts))
 		b.resolveConflicts(conflicts)
 	}
 
@@ -134,7 +134,7 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 		}
 	}
 
-	b.logger.Printf("Changes to push: %d new cards, %d updated cards", len(newCards), len(existingChangedCards))
+	b.logger.Info("Changes to push: %d new cards, %d updated cards", len(newCards), len(existingChangedCards))
 
 	// Counters for summary
 	var (
@@ -285,10 +285,10 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 
 	// Log summary
 	if dryRun {
-		b.logger.Printf("DRY RUN: Would create %d cards, update %d cards, pull %d changes, resolve %d conflicts",
+		b.logger.Info("DRY RUN: Would create %d cards, update %d cards, pull %d changes, resolve %d conflicts",
 			createdCount, updatedCount, pulledCount, conflictCount)
 	} else {
-		b.logger.Printf("Sync complete: Created %d cards, updated %d cards, pulled %d changes, resolved %d conflicts",
+		b.logger.Info("Sync complete: Created %d cards, updated %d cards, pulled %d changes, resolved %d conflicts",
 			createdCount, updatedCount, pulledCount, conflictCount)
 	}
 
@@ -345,7 +345,7 @@ func (b *BothSyncer) resolveConflicts(conflicts []*Conflict) {
 			checksumDisplay = checksumDisplay[:8]
 		}
 
-		b.logger.Printf("CONFLICT - Card ID %d ('%s'): Sheet checksum=%s vs Anki modified=%s. Winner: %s",
+		b.logger.Info("CONFLICT - Card ID %d ('%s'): Sheet checksum=%s vs Anki modified=%s. Winner: %s",
 			conflict.AnkiID,
 			conflict.SheetCard.English,
 			checksumDisplay,

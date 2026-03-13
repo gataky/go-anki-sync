@@ -2,7 +2,6 @@ package sync
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/yourusername/sync/internal/anki"
+	"github.com/yourusername/sync/internal/logging"
 	"github.com/yourusername/sync/internal/mapper"
 	"github.com/yourusername/sync/internal/sheets"
 	"github.com/yourusername/sync/pkg/models"
@@ -20,7 +20,7 @@ type Pusher struct {
 	sheetsClient SheetsClientInterface
 	ankiClient   AnkiClientInterface
 	config       *models.Config
-	logger       *log.Logger
+	logger       *logging.SyncLogger
 	ttsClient    TTSClientInterface
 }
 
@@ -29,7 +29,7 @@ func NewPusher(
 	sheetsClient SheetsClientInterface,
 	ankiClient AnkiClientInterface,
 	config *models.Config,
-	logger *log.Logger,
+	logger *logging.SyncLogger,
 	ttsClient TTSClientInterface,
 ) *Pusher {
 	return &Pusher{
@@ -44,7 +44,7 @@ func NewPusher(
 // Push executes the push sync from Google Sheets to Anki.
 // If dryRun is true, no changes are made to Anki or Sheet.
 func (p *Pusher) Push(dryRun bool) error {
-	p.logger.Println("Starting push sync (Sheets → Anki)")
+	p.logger.Info("Starting push sync (Sheets → Anki)")
 
 	// Read all rows from Sheet
 	rows, err := p.sheetsClient.ReadSheet(p.config.GoogleSheetID, p.config.SheetName)
@@ -108,7 +108,7 @@ func (p *Pusher) Push(dryRun bool) error {
 		cards = append(cards, card)
 	}
 
-	p.logger.Printf("Loaded %d cards from sheet", len(cards))
+	p.logger.Info("Loaded %d cards from sheet", len(cards))
 
 	// Separate into new and existing cards
 	newCards := make([]*models.VocabCard, 0)
@@ -122,14 +122,14 @@ func (p *Pusher) Push(dryRun bool) error {
 		}
 	}
 
-	p.logger.Printf("Found %d new cards, %d existing cards", len(newCards), len(existingCards))
+	p.logger.Info("Found %d new cards, %d existing cards", len(newCards), len(existingCards))
 
 	// Ensure deck exists
 	if !dryRun {
 		if err := p.ankiClient.CreateDeck(p.config.AnkiDeck); err != nil {
 			return fmt.Errorf("failed to create deck: %w", err)
 		}
-		p.logger.Printf("Ensured deck '%s' exists", p.config.AnkiDeck)
+		p.logger.Info("Ensured deck '%s' exists", p.config.AnkiDeck)
 	}
 
 	// Ensure VocabSync note type exists
@@ -137,7 +137,7 @@ func (p *Pusher) Push(dryRun bool) error {
 		if err := p.ankiClient.CreateNoteType(anki.VocabSyncModelName); err != nil {
 			return fmt.Errorf("failed to create note type: %w", err)
 		}
-		p.logger.Printf("Ensured note type '%s' exists", anki.VocabSyncModelName)
+		p.logger.Info("Ensured note type '%s' exists", anki.VocabSyncModelName)
 	}
 
 	// Process new cards - collect partial results even on error
@@ -158,21 +158,11 @@ func (p *Pusher) Push(dryRun bool) error {
 			// Sheet write failure is critical - return immediately
 			return fmt.Errorf("failed to write updates to sheet: %w", err)
 		}
-		p.logger.Printf("Wrote %d updates to sheet", len(allUpdates))
+		p.logger.Info("Wrote %d updates to sheet", len(allUpdates))
 	}
 
-	// Log summary
-	createdCount := len(newCardUpdates) / 2 // Each new card generates 2 updates (Anki ID + Checksum)
-	updatedCount := len(existingCardUpdates)
-	unchangedCount := len(existingCards) - updatedCount
-
-	if dryRun {
-		p.logger.Printf("DRY RUN: Would create %d new cards, would update %d cards, %d unchanged",
-			createdCount, updatedCount, unchangedCount)
-	} else {
-		p.logger.Printf("Push complete: Created %d new cards, updated %d cards, %d unchanged",
-			createdCount, updatedCount, unchangedCount)
-	}
+	// Print summary
+	p.logger.PrintSummary("Push")
 
 	// Return combined errors if any occurred
 	// Note: Partial results were already written to sheet above
@@ -244,7 +234,7 @@ func (p *Pusher) generateAudioForCard(card *models.VocabCard) ([]byte, string) {
 	// Validate Greek text
 	greekText := strings.TrimSpace(card.Greek)
 	if greekText == "" {
-		p.logger.Printf("WARNING: Skipping audio generation for card '%s' (row %d): Greek text is empty", card.English, card.RowNumber)
+		p.logger.Warn("Skipping audio generation for card '%s' (row %d): Greek text is empty", card.English, card.RowNumber)
 		return nil, ""
 	}
 
@@ -253,7 +243,7 @@ func (p *Pusher) generateAudioForCard(card *models.VocabCard) ([]byte, string) {
 
 	// Check if audio file already exists
 	if p.audioFileExists(filename) {
-		p.logger.Printf("Audio already exists for '%s', linking to card", card.Greek)
+		p.logger.Info("Audio already exists for '%s', linking to card", card.Greek)
 		// Return nil data (no upload needed) but return filename to link it
 		return nil, filename
 	}
@@ -261,11 +251,11 @@ func (p *Pusher) generateAudioForCard(card *models.VocabCard) ([]byte, string) {
 	// Generate audio using TTS
 	audioData, err := p.ttsClient.GenerateAudio(greekText)
 	if err != nil {
-		p.logger.Printf("ERROR: Failed to generate audio for '%s': %v", card.Greek, err)
+		p.logger.Error("Failed to generate audio for '%s': %v", card.Greek, err)
 		return nil, ""
 	}
 
-	p.logger.Printf("Generated audio for '%s' (%d bytes)", card.Greek, len(audioData))
+	p.logger.Info("Generated audio for '%s' (%d bytes)", card.Greek, len(audioData))
 	return audioData, filename
 }
 
@@ -286,15 +276,15 @@ func (p *Pusher) createNewCards(cards []*models.VocabCard, dryRun bool) ([]sheet
 
 	for _, card := range cards {
 		if dryRun {
-			p.logger.Printf("DRY RUN: Would create card '%s' (%s)", card.English, card.Greek)
+			p.logger.Info("DRY RUN: Would create card '%s' (%s)", card.English, card.Greek)
 
 			// Check if audio would be generated
 			if ttsEnabled && strings.TrimSpace(card.Greek) != "" {
 				filename := fmt.Sprintf("%s.mp3", card.Greek)
 				if p.audioFileExists(filename) {
-					p.logger.Printf("DRY RUN: Audio already exists: %s", filename)
+					p.logger.Info("DRY RUN: Audio already exists: %s", filename)
 				} else {
-					p.logger.Printf("DRY RUN: Would generate audio: %s", filename)
+					p.logger.Info("DRY RUN: Would generate audio: %s", filename)
 				}
 			}
 			continue
@@ -314,9 +304,9 @@ func (p *Pusher) createNewCards(cards []*models.VocabCard, dryRun bool) ([]sheet
 			// Log audio attachment status
 			if audioFilename != "" {
 				if len(audioData) > 0 {
-					p.logger.Printf("Uploading and attaching audio '%s' to card '%s'", audioFilename, card.English)
+					p.logger.Info("Uploading and attaching audio '%s' to card '%s'", audioFilename, card.English)
 				} else {
-					p.logger.Printf("Linking existing audio '%s' to card '%s'", audioFilename, card.English)
+					p.logger.Info("Linking existing audio '%s' to card '%s'", audioFilename, card.English)
 				}
 			}
 
@@ -336,13 +326,14 @@ func (p *Pusher) createNewCards(cards []*models.VocabCard, dryRun bool) ([]sheet
 		)
 		if err != nil {
 			// Log error but continue with remaining cards
-			p.logger.Printf("ERROR: Failed to create card '%s' (row %d): %v", card.English, card.RowNumber, err)
+			p.logger.Error("Failed to create card '%s' (row %d): %v", card.English, card.RowNumber, err)
 			errors = append(errors, fmt.Errorf("row %d ('%s'): %w", card.RowNumber, card.English, err))
 			continue
 		}
 
 		card.AnkiID = noteID
-		p.logger.Printf("Created card '%s' with Anki ID %d", card.English, noteID)
+		p.logger.Info("Created card '%s' with Anki ID %d", card.English, noteID)
+		p.logger.AddStat("created", 1)
 		successCount++
 
 		// Prepare updates for Anki ID and Checksum columns
@@ -361,7 +352,7 @@ func (p *Pusher) createNewCards(cards []*models.VocabCard, dryRun bool) ([]sheet
 
 	// Return partial results with combined error if any failures occurred
 	if len(errors) > 0 {
-		p.logger.Printf("Created %d/%d cards successfully, %d failed", successCount, len(cards), len(errors))
+		p.logger.Info("Created %d/%d cards successfully, %d failed", successCount, len(cards), len(errors))
 		var errMsg string
 		if len(errors) == 1 {
 			errMsg = errors[0].Error()
@@ -403,13 +394,14 @@ func (p *Pusher) updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]
 	for _, card := range cards {
 		// Check if card has changed
 		if !mapper.HasChanged(card) {
+			p.logger.AddStat("unchanged", 1)
 			continue // Card unchanged, skip
 		}
 
 		attemptedCount++
 
 		if dryRun {
-			p.logger.Printf("DRY RUN: Would update card '%s' (Anki ID %d)", card.English, card.AnkiID)
+			p.logger.Info("DRY RUN: Would update card '%s' (Anki ID %d)", card.English, card.AnkiID)
 			continue
 		}
 
@@ -422,9 +414,9 @@ func (p *Pusher) updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]
 			// Log audio status
 			if audioFilename != "" {
 				if len(audioData) > 0 {
-					p.logger.Printf("Uploading updated audio '%s' for card '%s'", audioFilename, card.English)
+					p.logger.Info("Uploading updated audio '%s' for card '%s'", audioFilename, card.English)
 				} else {
-					p.logger.Printf("Linking audio '%s' to updated card '%s'", audioFilename, card.English)
+					p.logger.Info("Linking audio '%s' to updated card '%s'", audioFilename, card.English)
 				}
 			}
 
@@ -437,12 +429,13 @@ func (p *Pusher) updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]
 		// Update note in Anki
 		if err := p.ankiClient.UpdateNoteFields(card.AnkiID, card, audioData, audioFilename); err != nil {
 			// Log error but continue with remaining cards
-			p.logger.Printf("ERROR: Failed to update card '%s' (Anki ID %d, row %d): %v", card.English, card.AnkiID, card.RowNumber, err)
+			p.logger.Error("Failed to update card '%s' (Anki ID %d, row %d): %v", card.English, card.AnkiID, card.RowNumber, err)
 			errors = append(errors, fmt.Errorf("row %d ('%s', ID %d): %w", card.RowNumber, card.English, card.AnkiID, err))
 			continue
 		}
 
-		p.logger.Printf("Updated card '%s' (Anki ID %d)", card.English, card.AnkiID)
+		p.logger.Info("Updated card '%s' (Anki ID %d)", card.English, card.AnkiID)
+		p.logger.AddStat("updated", 1)
 		successCount++
 
 		// Update checksum
@@ -459,7 +452,7 @@ func (p *Pusher) updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]
 
 	// Return partial results with combined error if any failures occurred
 	if len(errors) > 0 {
-		p.logger.Printf("Updated %d/%d cards successfully, %d failed", successCount, attemptedCount, len(errors))
+		p.logger.Info("Updated %d/%d cards successfully, %d failed", successCount, attemptedCount, len(errors))
 		var errMsg string
 		if len(errors) == 1 {
 			errMsg = errors[0].Error()

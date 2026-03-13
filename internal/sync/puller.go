@@ -2,9 +2,9 @@ package sync
 
 import (
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/yourusername/sync/internal/logging"
 	"github.com/yourusername/sync/internal/mapper"
 	"github.com/yourusername/sync/internal/sheets"
 	"github.com/yourusername/sync/pkg/models"
@@ -31,7 +31,7 @@ type Puller struct {
 	config       *models.Config
 	state        *models.SyncState
 	stateManager StateManager
-	logger       *log.Logger
+	logger       *logging.SyncLogger
 }
 
 // NewPuller creates a new Puller instance.
@@ -41,7 +41,7 @@ func NewPuller(
 	config *models.Config,
 	state *models.SyncState,
 	stateManager StateManager,
-	logger *log.Logger,
+	logger *logging.SyncLogger,
 ) *Puller {
 	return &Puller{
 		sheetsClient: sheetsClient,
@@ -56,15 +56,15 @@ func NewPuller(
 // Pull executes the pull sync from Anki to Google Sheets.
 // If dryRun is true, no changes are made to Sheet or state.
 func (p *Puller) Pull(dryRun bool) error {
-	p.logger.Println("Starting pull sync (Anki → Sheets)")
+	p.logger.Info("Starting pull sync (Anki → Sheets)")
 
 	// Load last pull timestamp from state
 	lastPullTime := p.state.LastPullTimestamp
 	if lastPullTime.IsZero() {
 		lastPullTime = time.Now().Add(-24 * 365 * time.Hour) // Default: 1 year ago
-		p.logger.Println("No previous pull timestamp, using default (1 year ago)")
+		p.logger.Info("No previous pull timestamp, using default (1 year ago)")
 	} else {
-		p.logger.Printf("Last pull timestamp: %s", lastPullTime.Format(time.RFC3339))
+		p.logger.Info("Last pull timestamp: %s", lastPullTime.Format(time.RFC3339))
 	}
 
 	// Query Anki for modified notes since last timestamp
@@ -74,11 +74,11 @@ func (p *Puller) Pull(dryRun bool) error {
 	}
 
 	if len(noteIDs) == 0 {
-		p.logger.Println("No changes in Anki since last pull")
+		p.logger.Info("No changes in Anki since last pull")
 		return nil
 	}
 
-	p.logger.Printf("Found %d modified notes in Anki", len(noteIDs))
+	p.logger.Info("Found %d modified notes in Anki", len(noteIDs))
 
 	// Fetch full note details
 	ankiCards, err := p.ankiClient.GetNotesInfo(noteIDs)
@@ -116,7 +116,7 @@ func (p *Puller) Pull(dryRun bool) error {
 		}
 	}
 
-	p.logger.Printf("Built map of %d Anki IDs to row numbers", len(ankiIDToRow))
+	p.logger.Info("Built map of %d Anki IDs to row numbers", len(ankiIDToRow))
 
 	// Build CellUpdate list for modified notes
 	updates := make([]sheets.CellUpdate, 0)
@@ -151,7 +151,7 @@ func (p *Puller) Pull(dryRun bool) error {
 	}
 
 	if skippedCount > 0 {
-		p.logger.Printf("Skipped %d notes not found in Sheet", skippedCount)
+		p.logger.Info("Skipped %d notes not found in Sheet", skippedCount)
 	}
 
 	// Write updates to Sheet
@@ -163,7 +163,7 @@ func (p *Puller) Pull(dryRun bool) error {
 		); err != nil {
 			return fmt.Errorf("failed to write updates to sheet: %w", err)
 		}
-		p.logger.Printf("Wrote %d cell updates to sheet", len(updates))
+		p.logger.Info("Wrote %d cell updates to sheet", len(updates))
 
 		// Update state with new LastPullTimestamp
 		p.state.LastPullTimestamp = time.Now()
@@ -171,15 +171,15 @@ func (p *Puller) Pull(dryRun bool) error {
 		if err := p.stateManager.SaveState(p.state, statePath); err != nil {
 			return fmt.Errorf("failed to save state: %w", err)
 		}
-		p.logger.Println("Updated state with new pull timestamp")
+		p.logger.Info("Updated state with new pull timestamp")
 	}
 
 	// Log summary
 	updatedRows := len(ankiCards) - skippedCount
 	if dryRun {
-		p.logger.Printf("DRY RUN: Would update %d rows from Anki changes", updatedRows)
+		p.logger.Info("DRY RUN: Would update %d rows from Anki changes", updatedRows)
 	} else {
-		p.logger.Printf("Pull complete: Updated %d rows from Anki changes", updatedRows)
+		p.logger.Info("Pull complete: Updated %d rows from Anki changes", updatedRows)
 	}
 
 	return nil

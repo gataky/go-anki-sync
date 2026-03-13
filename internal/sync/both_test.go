@@ -1,13 +1,13 @@
 package sync
 
 import (
-	"log"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yourusername/sync/internal/logging"
 	"github.com/yourusername/sync/internal/mapper"
 	"github.com/yourusername/sync/pkg/models"
 )
@@ -22,7 +22,7 @@ func TestNewBothSyncer(t *testing.T) {
 	}
 	state := &models.SyncState{}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", log.LstdFlags)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -33,7 +33,7 @@ func TestNewBothSyncer(t *testing.T) {
 }
 
 func TestDetectConflicts_NoConflicts(t *testing.T) {
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 	syncer := &BothSyncer{logger: logger}
 
 	// Sheet card unchanged
@@ -59,7 +59,7 @@ func TestDetectConflicts_NoConflicts(t *testing.T) {
 }
 
 func TestDetectConflicts_WithConflict(t *testing.T) {
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 	syncer := &BothSyncer{logger: logger}
 
 	// Sheet card modified (wrong checksum)
@@ -88,7 +88,7 @@ func TestDetectConflicts_WithConflict(t *testing.T) {
 }
 
 func TestResolveConflicts_AnkiWins(t *testing.T) {
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 	syncer := &BothSyncer{logger: logger}
 
 	conflict := &Conflict{
@@ -112,7 +112,7 @@ func TestResolveConflicts_AnkiWins(t *testing.T) {
 }
 
 func TestResolveConflicts_SheetWins(t *testing.T) {
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 	syncer := &BothSyncer{logger: logger}
 
 	conflict := &Conflict{
@@ -167,7 +167,7 @@ func TestSync_NewCardsOnly(t *testing.T) {
 	}
 	state := &models.SyncState{}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -227,7 +227,7 @@ func TestSync_PullChangesOnly(t *testing.T) {
 	}
 	state := &models.SyncState{}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -289,7 +289,7 @@ func TestSync_WithConflict(t *testing.T) {
 	}
 	state := &models.SyncState{}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -339,7 +339,7 @@ func TestSync_DryRun(t *testing.T) {
 	}
 	state := &models.SyncState{}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
 
@@ -402,7 +402,7 @@ func TestSync_MixedOperations(t *testing.T) {
 	}
 	state := &models.SyncState{}
 	stateManager := &mockStateManager{}
-	logger := log.New(os.Stdout, "TEST: ", 0)
+	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
 
