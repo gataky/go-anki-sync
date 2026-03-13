@@ -2,11 +2,11 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/yourusername/sync/internal/anki"
-	"github.com/yourusername/sync/internal/config"
-	"github.com/yourusername/sync/internal/sheets"
-	"github.com/yourusername/sync/internal/state"
-	"github.com/yourusername/sync/internal/sync"
+	"github.com/gataky/sync/internal/anki"
+	"github.com/gataky/sync/internal/config"
+	"github.com/gataky/sync/internal/sheets"
+	"github.com/gataky/sync/internal/state"
+	"github.com/gataky/sync/internal/sync"
 )
 
 var bothCmd = &cobra.Command{

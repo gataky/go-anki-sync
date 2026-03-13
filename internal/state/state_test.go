@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/yourusername/sync/pkg/models"
+	"github.com/gataky/sync/pkg/models"
 )
 
 func TestGetDefaultStatePath(t *testing.T) {

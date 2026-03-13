@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/yourusername/sync/internal/config"
-	"github.com/yourusername/sync/pkg/models"
+	"github.com/gataky/sync/internal/config"
+	"github.com/gataky/sync/pkg/models"
 )
 
 var initCmd = &cobra.Command{

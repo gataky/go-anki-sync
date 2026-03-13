@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
-	"github.com/yourusername/sync/internal/anki"
-	"github.com/yourusername/sync/internal/config"
-	"github.com/yourusername/sync/internal/sheets"
-	"github.com/yourusername/sync/internal/sync"
-	"github.com/yourusername/sync/internal/tts"
+	"github.com/gataky/sync/internal/anki"
+	"github.com/gataky/sync/internal/config"
+	"github.com/gataky/sync/internal/sheets"
+	"github.com/gataky/sync/internal/sync"
+	"github.com/gataky/sync/internal/tts"
 )
 
 var pushCmd = &cobra.Command{

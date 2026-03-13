@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yourusername/sync/internal/logging"
-	"github.com/yourusername/sync/internal/mapper"
-	"github.com/yourusername/sync/internal/sheets"
-	"github.com/yourusername/sync/pkg/models"
+	"github.com/gataky/sync/internal/logging"
+	"github.com/gataky/sync/internal/mapper"
+	"github.com/gataky/sync/internal/sheets"
+	"github.com/gataky/sync/pkg/models"
 )
 
 // PullerAnkiClient extends AnkiClientInterface with additional methods needed for pulling.

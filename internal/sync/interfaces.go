@@ -1,8 +1,8 @@
 package sync
 
 import (
-	"github.com/yourusername/sync/internal/sheets"
-	"github.com/yourusername/sync/pkg/models"
+	"github.com/gataky/sync/internal/sheets"
+	"github.com/gataky/sync/pkg/models"
 )
 
 // SheetsClientInterface defines the methods needed from the Sheets client.

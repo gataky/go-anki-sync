@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/yourusername/sync/pkg/models"
+	"github.com/gataky/sync/pkg/models"
 )
 
 // TestNewTTSClient_Success tests successful client creation.

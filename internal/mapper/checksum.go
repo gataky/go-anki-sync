@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"github.com/yourusername/sync/pkg/models"
+	"github.com/gataky/sync/pkg/models"
 )
 
 // CalculateChecksum computes a SHA256 hash of the content fields of a VocabCard.

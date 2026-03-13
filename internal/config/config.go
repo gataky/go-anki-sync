@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/yourusername/sync/pkg/models"
+	"github.com/gataky/sync/pkg/models"
 	"gopkg.in/yaml.v3"
 )
 

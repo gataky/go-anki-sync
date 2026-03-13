@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/yourusername/sync/internal/cli"
+	"github.com/gataky/sync/internal/cli"
 )
 
 func main() {

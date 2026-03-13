@@ -8,7 +8,7 @@ import (
 
 	"github.com/atselvan/ankiconnect"
 	"github.com/privatesquare/bkst-go-utils/utils/errors"
-	"github.com/yourusername/sync/pkg/models"
+	"github.com/gataky/sync/pkg/models"
 )
 
 const (

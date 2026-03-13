@@ -1,4 +1,4 @@
-module github.com/yourusername/sync
+module github.com/gataky/sync
 
 go 1.25.0
 

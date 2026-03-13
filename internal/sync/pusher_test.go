@@ -7,11 +7,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/yourusername/sync/internal/anki"
-	"github.com/yourusername/sync/internal/logging"
-	"github.com/yourusername/sync/internal/mapper"
-	"github.com/yourusername/sync/internal/sheets"
-	"github.com/yourusername/sync/pkg/models"
+	"github.com/gataky/sync/internal/anki"
+	"github.com/gataky/sync/internal/logging"
+	"github.com/gataky/sync/internal/mapper"
+	"github.com/gataky/sync/internal/sheets"
+	"github.com/gataky/sync/pkg/models"
 )
 
 // Mock implementations for testing

@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/yourusername/sync/internal/logging"
+	"github.com/gataky/sync/internal/logging"
 )
 
 var (
