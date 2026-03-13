@@ -103,6 +103,16 @@ func (l *SyncLogger) PrintSummary(operation string) {
 		if skipped := l.stats["skipped"]; skipped > 0 {
 			parts = append(parts, fmt.Sprintf("%d skipped", skipped))
 		}
+	} else if operation == "Sync" {
+		if pushed := l.stats["pushed"]; pushed > 0 {
+			parts = append(parts, fmt.Sprintf("%d pushed", pushed))
+		}
+		if pulled := l.stats["pulled"]; pulled > 0 {
+			parts = append(parts, fmt.Sprintf("%d pulled", pulled))
+		}
+		if conflicts := l.stats["conflicts"]; conflicts > 0 {
+			parts = append(parts, fmt.Sprintf("%d conflicts", conflicts))
+		}
 	}
 
 	// Add error count if any

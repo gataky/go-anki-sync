@@ -114,6 +114,7 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 	conflicts := b.detectConflicts(sheetCards, ankiCards)
 	if len(conflicts) > 0 {
 		b.logger.Info("Detected %d conflicts", len(conflicts))
+		b.logger.AddStat("conflicts", len(conflicts))
 		b.resolveConflicts(conflicts)
 	}
 
@@ -136,14 +137,6 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 
 	b.logger.Info("Changes to push: %d new cards, %d updated cards", len(newCards), len(existingChangedCards))
 
-	// Counters for summary
-	var (
-		createdCount  int
-		updatedCount  int
-		pulledCount   int
-		conflictCount = len(conflicts)
-	)
-
 	// Apply push changes (new cards and updates from Sheet)
 	if !dryRun && (len(newCards) > 0 || len(existingChangedCards) > 0) {
 		// Ensure deck and note type exist
@@ -165,7 +158,7 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 					return fmt.Errorf("failed to write new card updates: %w", err)
 				}
 			}
-			createdCount = len(newCards)
+			b.logger.AddStat("pushed", len(newCards))
 		}
 
 		// Update existing changed cards
@@ -179,7 +172,7 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 					return fmt.Errorf("failed to write update checksums: %w", err)
 				}
 			}
-			updatedCount = len(updates) // Number of cards actually updated
+			b.logger.AddStat("pushed", len(updates)) // Number of cards actually updated
 		}
 	}
 
@@ -263,7 +256,7 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 				sheets.CellUpdate{Row: rowNum - 1, Column: "I", Value: ankiCard.SubTag1},
 				sheets.CellUpdate{Row: rowNum - 1, Column: "J", Value: ankiCard.SubTag2},
 			)
-			pulledCount++
+			b.logger.AddStat("pulled", 1)
 		}
 
 		if !dryRun && len(pullUpdates) > 0 {
@@ -283,14 +276,8 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 		}
 	}
 
-	// Log summary
-	if dryRun {
-		b.logger.Info("DRY RUN: Would create %d cards, update %d cards, pull %d changes, resolve %d conflicts",
-			createdCount, updatedCount, pulledCount, conflictCount)
-	} else {
-		b.logger.Info("Sync complete: Created %d cards, updated %d cards, pulled %d changes, resolved %d conflicts",
-			createdCount, updatedCount, pulledCount, conflictCount)
-	}
+	// Print summary
+	b.logger.PrintSummary("Sync")
 
 	return nil
 }

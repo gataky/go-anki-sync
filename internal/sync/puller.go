@@ -120,14 +120,13 @@ func (p *Puller) Pull(dryRun bool) error {
 
 	// Build CellUpdate list for modified notes
 	updates := make([]sheets.CellUpdate, 0)
-	skippedCount := 0
 
 	for _, ankiCard := range ankiCards {
 		// Find corresponding row in Sheet by AnkiID
 		rowNumber, exists := ankiIDToRow[ankiCard.AnkiID]
 		if !exists {
 			// Note not found in Sheet (may have been deleted)
-			skippedCount++
+			p.logger.AddStat("skipped", 1)
 			continue
 		}
 
@@ -148,10 +147,7 @@ func (p *Puller) Pull(dryRun bool) error {
 			sheets.CellUpdate{Row: rowNumber - 1, Column: "I", Value: ankiCard.SubTag1},
 			sheets.CellUpdate{Row: rowNumber - 1, Column: "J", Value: ankiCard.SubTag2},
 		)
-	}
-
-	if skippedCount > 0 {
-		p.logger.Info("Skipped %d notes not found in Sheet", skippedCount)
+		p.logger.AddStat("updated", 1)
 	}
 
 	// Write updates to Sheet
@@ -174,13 +170,8 @@ func (p *Puller) Pull(dryRun bool) error {
 		p.logger.Info("Updated state with new pull timestamp")
 	}
 
-	// Log summary
-	updatedRows := len(ankiCards) - skippedCount
-	if dryRun {
-		p.logger.Info("DRY RUN: Would update %d rows from Anki changes", updatedRows)
-	} else {
-		p.logger.Info("Pull complete: Updated %d rows from Anki changes", updatedRows)
-	}
+	// Print summary
+	p.logger.PrintSummary("Pull")
 
 	return nil
 }
