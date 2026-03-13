@@ -1,3 +1,9 @@
+// Package logging provides level-based logging with statistics tracking
+// for sync operations.
+//
+// Each SyncLogger instance is intended for a single operation. Create a new
+// logger for each push/pull/init operation to avoid unbounded memory growth.
+// SyncLogger is not thread-safe.
 package logging
 
 import (
@@ -28,7 +34,8 @@ type SyncLogger struct {
 	writer io.Writer
 }
 
-// NewSyncLogger creates a new SyncLogger with the specified level
+// NewSyncLogger creates a new SyncLogger with the specified level.
+// Create a new logger for each operation; do not reuse across operations.
 func NewSyncLogger(level Level, writer io.Writer) *SyncLogger {
 	logFlags := 0
 	if level == Debug {
