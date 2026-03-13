@@ -3,8 +3,8 @@ package anki
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/gataky/sync/pkg/models"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildGrammarField(t *testing.T) {
@@ -103,10 +103,10 @@ func TestBuildTags(t *testing.T) {
 
 func TestParseGrammarField(t *testing.T) {
 	tests := []struct {
-		name             string
-		grammar          string
-		expectedPOS      string
-		expectedAttr     string
+		name         string
+		grammar      string
+		expectedPOS  string
+		expectedAttr string
 	}{
 		{
 			name:         "with attributes",

@@ -4,11 +4,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/gataky/sync/internal/logging"
 	"github.com/gataky/sync/internal/mapper"
+	"github.com/gataky/sync/internal/testutil"
 	"github.com/gataky/sync/pkg/models"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestCreateNewCards_PartialFailure tests that partial results are written even when some cards fail
@@ -16,12 +17,12 @@ func TestCreateNewCards_PartialFailure(t *testing.T) {
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	// Create mock client that fails on specific cards
-	ankiClient := &mockAnkiClient{
-		nextNoteID: 1000000000000,
-		failCards:  map[string]bool{"fail-card": true}, // This card will fail
+	ankiClient := &testutil.MockAnkiClient{
+		NextNoteID: 1000000000000,
+		FailCards:  map[string]bool{"fail-card": true}, // This card will fail
 	}
 
-	sheetsClient := &mockSheetsClient{}
+	sheetsClient := &testutil.MockSheetsClient{}
 
 	config := &models.Config{
 		AnkiDeck: "Greek",
@@ -55,7 +56,7 @@ func TestCreateNewCards_PartialFailure(t *testing.T) {
 	assert.Equal(t, int64(1000000000001), updates[2].Value)
 
 	// Verify only 2 notes were created
-	assert.Len(t, ankiClient.createdNotes, 2)
+	assert.Len(t, ankiClient.CreatedNotes, 2)
 }
 
 // TestUpdateExistingCards_PartialFailure tests that partial results are written even when some updates fail
@@ -63,12 +64,12 @@ func TestUpdateExistingCards_PartialFailure(t *testing.T) {
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	// Create mock client that fails on specific note IDs
-	ankiClient := &mockAnkiClient{
-		updatedNotes: make(map[int64]*models.VocabCard),
-		failUpdates:  map[int64]bool{2222222222222: true}, // This update will fail
+	ankiClient := &testutil.MockAnkiClient{
+		UpdatedNotes: make(map[int64]*models.VocabCard),
+		FailUpdates:  map[int64]bool{2222222222222: true}, // This update will fail
 	}
 
-	sheetsClient := &mockSheetsClient{}
+	sheetsClient := &testutil.MockSheetsClient{}
 
 	config := &models.Config{
 		AnkiDeck: "Greek",
@@ -126,10 +127,10 @@ func TestUpdateExistingCards_PartialFailure(t *testing.T) {
 	assert.Equal(t, "B", updates[1].Column)
 
 	// Verify only 2 notes were updated
-	assert.Len(t, ankiClient.updatedNotes, 2)
-	assert.NotNil(t, ankiClient.updatedNotes[1111111111111])
-	assert.NotNil(t, ankiClient.updatedNotes[3333333333333])
-	assert.Nil(t, ankiClient.updatedNotes[2222222222222]) // Failed update
+	assert.Len(t, ankiClient.UpdatedNotes, 2)
+	assert.NotNil(t, ankiClient.UpdatedNotes[1111111111111])
+	assert.NotNil(t, ankiClient.UpdatedNotes[3333333333333])
+	assert.Nil(t, ankiClient.UpdatedNotes[2222222222222]) // Failed update
 }
 
 // TestPush_WritesPartialResultsOnError tests that the main Push function writes partial results
@@ -137,21 +138,21 @@ func TestPush_WritesPartialResultsOnError(t *testing.T) {
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	// Create mock client that fails on specific cards
-	ankiClient := &mockAnkiClient{
-		nextNoteID: 1000000000000,
-		failCards:  map[string]bool{"fail-card": true},
-		deckExists: true,
-		modelExists: true,
+	ankiClient := &testutil.MockAnkiClient{
+		NextNoteID:  1000000000000,
+		FailCards:   map[string]bool{"fail-card": true},
+		DeckExists:  true,
+		ModelExists: true,
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows: [][]interface{}{
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows: [][]any{
 			{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 			{"", "", "success1", "επιτυχία1", "Noun"},
 			{"", "", "fail-card", "αποτυχία", "Noun"},
 			{"", "", "success2", "επιτυχία2", "Noun"},
 		},
-		headers: map[string]int{
+		Headers: map[string]int{
 			"anki id":        0,
 			"checksum":       1,
 			"english":        2,
@@ -175,13 +176,13 @@ func TestPush_WritesPartialResultsOnError(t *testing.T) {
 	assert.Contains(t, err.Error(), "fail-card")
 
 	// But should still have written updates to sheet for successful cards
-	require.NotNil(t, sheetsClient.lastBatchUpdate)
-	assert.Len(t, sheetsClient.lastBatchUpdate, 4) // 2 successful cards × 2 updates each
+	require.NotNil(t, sheetsClient.LastBatchUpdate)
+	assert.Len(t, sheetsClient.LastBatchUpdate, 4) // 2 successful cards × 2 updates each
 
 	// Verify the successful cards' Anki IDs were written
 	hasAnkiID1 := false
 	hasAnkiID2 := false
-	for _, update := range sheetsClient.lastBatchUpdate {
+	for _, update := range sheetsClient.LastBatchUpdate {
 		if update.Column == "A" && update.Row == 1 {
 			hasAnkiID1 = true
 		}

@@ -1,14 +1,8 @@
 package cli
 
 import (
-	"context"
-
-	"github.com/spf13/cobra"
-	"github.com/gataky/sync/internal/anki"
-	"github.com/gataky/sync/internal/config"
-	"github.com/gataky/sync/internal/sheets"
 	"github.com/gataky/sync/internal/sync"
-	"github.com/gataky/sync/internal/tts"
+	"github.com/spf13/cobra"
 )
 
 var pushCmd = &cobra.Command{
@@ -25,54 +19,16 @@ func init() {
 }
 
 func runPush(cmd *cobra.Command, args []string) error {
-	logger := newSyncLogger()
 	dryRun := getDryRun()
 
-	// Load configuration
-	configPath, err := config.GetDefaultConfigPath()
+	ctx, err := Bootstrap(BootstrapOptions{LoadState: false, EnableTTS: true})
 	if err != nil {
-		return printError("failed to get config path: %w", err)
+		return err
 	}
-
-	cfg, err := config.LoadConfig(configPath)
-	if err != nil {
-		return printError("failed to load configuration: %w", err)
-	}
-
-	// Get service account credentials path
-	credentialsPath, err := config.GetDefaultCredentialsPath()
-	if err != nil {
-		return printError("failed to get credentials path: %w", err)
-	}
-
-	// Initialize Google Sheets client (tokenPath not needed for service accounts)
-	sheetsClient, err := sheets.NewSheetsClient(credentialsPath, "")
-	if err != nil {
-		return printError("failed to initialize Sheets client: %w", err)
-	}
-
-	// Initialize Anki client
-	ankiClient, err := anki.NewAnkiClient(cfg.AnkiConnectURL)
-	if err != nil {
-		return printError("failed to initialize Anki client: %w", err)
-	}
-
-	// Initialize TTS client if enabled
-	var ttsClient *tts.TTSClient
-	if cfg.TextToSpeech != nil && cfg.TextToSpeech.Enabled {
-		ctx := context.Background()
-		ttsClient, err = tts.NewTTSClient(ctx, credentialsPath, cfg.TextToSpeech)
-		if err != nil {
-			return printError("failed to initialize TTS client: %w", err)
-		}
-		defer ttsClient.Close()
-		logger.Info("TTS client initialized successfully")
-	} else {
-		logger.Info("TTS is disabled, skipping audio generation")
-	}
+	defer ctx.Close()
 
 	// Create pusher
-	pusher := sync.NewPusher(sheetsClient, ankiClient, cfg, logger, ttsClient)
+	pusher := sync.NewPusher(ctx.SheetsClient, ctx.AnkiClient, ctx.Config, ctx.Logger, ctx.TTSClient)
 
 	// Execute push
 	if err := pusher.Push(dryRun); err != nil {

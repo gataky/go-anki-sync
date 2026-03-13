@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/atselvan/ankiconnect"
-	"github.com/privatesquare/bkst-go-utils/utils/errors"
 	"github.com/gataky/sync/pkg/models"
+	"github.com/privatesquare/bkst-go-utils/utils/errors"
 )
 
 const (

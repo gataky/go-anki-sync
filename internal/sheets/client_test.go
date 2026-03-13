@@ -12,13 +12,13 @@ func TestParseHeaders(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		rows     [][]interface{}
+		rows     [][]any
 		expected map[string]int
 		wantErr  bool
 	}{
 		{
 			name: "valid headers",
-			rows: [][]interface{}{
+			rows: [][]any{
 				{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 			},
 			expected: map[string]int{
@@ -32,7 +32,7 @@ func TestParseHeaders(t *testing.T) {
 		},
 		{
 			name: "case insensitive",
-			rows: [][]interface{}{
+			rows: [][]any{
 				{"ANKI ID", "English", "GREEK"},
 			},
 			expected: map[string]int{
@@ -44,7 +44,7 @@ func TestParseHeaders(t *testing.T) {
 		},
 		{
 			name: "headers with spaces",
-			rows: [][]interface{}{
+			rows: [][]any{
 				{"  Anki ID  ", "  English  ", "Greek"},
 			},
 			expected: map[string]int{
@@ -56,7 +56,7 @@ func TestParseHeaders(t *testing.T) {
 		},
 		{
 			name: "empty cells ignored",
-			rows: [][]interface{}{
+			rows: [][]any{
 				{"Anki ID", nil, "English", "", "Greek"},
 			},
 			expected: map[string]int{
@@ -68,7 +68,7 @@ func TestParseHeaders(t *testing.T) {
 		},
 		{
 			name:     "no rows",
-			rows:     [][]interface{}{},
+			rows:     [][]any{},
 			expected: nil,
 			wantErr:  true,
 		},
@@ -207,7 +207,7 @@ func TestParseHeaders_RealWorldExample(t *testing.T) {
 	client := &SheetsClient{}
 
 	// Simulate real sheet data
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech", "Attributes", "Examples", "Tag", "Sub-Tag 1", "Sub-Tag 2"},
 		{"1234567890123", "abc123", "hello", "γεια", "Interjection", "", "Hello, how are you?", "Greetings", "Basic", ""},
 	}

@@ -15,7 +15,7 @@ import (
 type CellUpdate struct {
 	Row    int    // Row number (1-indexed, excluding header)
 	Column string // Column letter (A, B, C, etc.)
-	Value  interface{}
+	Value  any
 }
 
 // SheetsClient provides methods to interact with Google Sheets API.
@@ -60,7 +60,7 @@ func NewSheetsClient(credentialsPath, tokenPath string) (*SheetsClient, error) {
 
 // ReadSheet fetches all rows from a Google Sheet.
 // Returns rows as a 2D slice of interface{} values.
-func (c *SheetsClient) ReadSheet(sheetID, sheetName string) ([][]interface{}, error) {
+func (c *SheetsClient) ReadSheet(sheetID, sheetName string) ([][]any, error) {
 	readRange := fmt.Sprintf("%s!A1:Z", sheetName) // Read columns A through Z
 
 	resp, err := c.service.Spreadsheets.Values.Get(sheetID, readRange).Do()
@@ -77,7 +77,7 @@ func (c *SheetsClient) ReadSheet(sheetID, sheetName string) ([][]interface{}, er
 
 // ParseHeaders parses the header row and returns a map of column names to indices.
 // Column matching is case-insensitive.
-func (c *SheetsClient) ParseHeaders(rows [][]interface{}) (map[string]int, error) {
+func (c *SheetsClient) ParseHeaders(rows [][]any) (map[string]int, error) {
 	if len(rows) == 0 {
 		return nil, fmt.Errorf("no rows to parse")
 	}
@@ -135,7 +135,7 @@ func (c *SheetsClient) BatchUpdateCells(sheetID, sheetName string, updates []Cel
 
 		data = append(data, &sheets.ValueRange{
 			Range:  cellRange,
-			Values: [][]interface{}{{update.Value}},
+			Values: [][]any{{update.Value}},
 		})
 	}
 
@@ -165,7 +165,7 @@ func (c *SheetsClient) CreateChecksumColumnIfMissing(sheetID, sheetName string, 
 	cellRange := fmt.Sprintf("%s!B1", sheetName)
 	valueRange := &sheets.ValueRange{
 		Range:  cellRange,
-		Values: [][]interface{}{{"Checksum"}},
+		Values: [][]any{{"Checksum"}},
 	}
 
 	_, err := c.service.Spreadsheets.Values.Update(sheetID, cellRange, valueRange).

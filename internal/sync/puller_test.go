@@ -9,75 +9,22 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/gataky/sync/internal/logging"
 	"github.com/gataky/sync/internal/mapper"
+	"github.com/gataky/sync/internal/testutil"
 	"github.com/gataky/sync/pkg/models"
 )
 
-// Mock implementations for Puller tests
-
-type mockPullerAnkiClient struct {
-	modifiedNoteIDs []int64
-	notesInfo       []*models.VocabCard
-}
-
-func (m *mockPullerAnkiClient) CreateDeck(deckName string) error {
-	return nil
-}
-
-func (m *mockPullerAnkiClient) CreateNoteType(modelName string) error {
-	return nil
-}
-
-func (m *mockPullerAnkiClient) AddNote(deckName, modelName string, card *models.VocabCard, audioData []byte, audioFilename string) (int64, error) {
-	return 0, nil
-}
-
-func (m *mockPullerAnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard, audioData []byte, audioFilename string) error {
-	return nil
-}
-
-func (m *mockPullerAnkiClient) CheckAudioExists(filename string) (bool, error) {
-	return false, nil
-}
-
-func (m *mockPullerAnkiClient) FindModifiedNotes(deckName string, sinceTimestamp time.Time) ([]int64, error) {
-	return m.modifiedNoteIDs, nil
-}
-
-func (m *mockPullerAnkiClient) GetNotesInfo(noteIDs []int64) ([]*models.VocabCard, error) {
-	return m.notesInfo, nil
-}
-
-type mockStateManager struct {
-	savedState *models.SyncState
-	statePath  string
-}
-
-func (m *mockStateManager) LoadState(path string) (*models.SyncState, error) {
-	return &models.SyncState{}, nil
-}
-
-func (m *mockStateManager) SaveState(state *models.SyncState, path string) error {
-	m.savedState = state
-	return nil
-}
-
-func (m *mockStateManager) GetDefaultStatePath() string {
-	if m.statePath == "" {
-		return "/tmp/state.json"
-	}
-	return m.statePath
-}
+// Mock implementations are in testutil package
 
 func TestNewPuller(t *testing.T) {
-	sheetsClient := &mockSheetsClient{}
-	ankiClient := &mockPullerAnkiClient{}
+	sheetsClient := &testutil.MockSheetsClient{}
+	ankiClient := &testutil.MockPullerAnkiClient{MockAnkiClient: testutil.NewMockAnkiClient(), }
 	config := &models.Config{
 		GoogleSheetID: "test-sheet-id",
 		SheetName:     "Vocabulary",
 		AnkiDeck:      "Greek",
 	}
 	state := &models.SyncState{}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -91,10 +38,9 @@ func TestNewPuller(t *testing.T) {
 }
 
 func TestPull_NoModifiedNotes(t *testing.T) {
-	sheetsClient := &mockSheetsClient{}
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{}, // No modified notes
-	}
+	sheetsClient := &testutil.MockSheetsClient{}
+	ankiClient := testutil.NewMockPullerAnkiClient()
+	ankiClient.ModifiedNoteIDs = []int64{}
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
 		SheetName:     "Vocabulary",
@@ -103,7 +49,7 @@ func TestPull_NoModifiedNotes(t *testing.T) {
 	state := &models.SyncState{
 		LastPullTimestamp: time.Now().Add(-1 * time.Hour),
 	}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -112,10 +58,10 @@ func TestPull_NoModifiedNotes(t *testing.T) {
 	require.NoError(t, err)
 
 	// No updates should be written
-	assert.Len(t, sheetsClient.batchUpdates, 0)
+	assert.Len(t, sheetsClient.BatchUpdates, 0)
 
 	// State should not be updated
-	assert.Nil(t, stateManager.savedState)
+	assert.Nil(t, stateManager.SavedState)
 }
 
 func TestPull_WithModifiedNotes(t *testing.T) {
@@ -140,14 +86,14 @@ func TestPull_WithModifiedNotes(t *testing.T) {
 	}
 	mapper.UpdateChecksum(existingCard)
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech", "Attributes", "Examples", "Tag", "Sub-Tag 1", "Sub-Tag 2"},
 		{float64(1234567890123), existingCard.StoredChecksum, "hello", "γεια", "Interjection", "", "", "", "", ""},
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
 
 	// Setup Anki data - card has been modified in Anki
@@ -163,10 +109,9 @@ func TestPull_WithModifiedNotes(t *testing.T) {
 		SubTag2:      "",
 	}
 
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{1234567890123},
-		notesInfo:       []*models.VocabCard{modifiedCard},
-	}
+	ankiClient := testutil.NewMockPullerAnkiClient()
+	ankiClient.ModifiedNoteIDs = []int64{1234567890123}
+	ankiClient.NotesInfo = []*models.VocabCard{modifiedCard}
 
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
@@ -176,7 +121,7 @@ func TestPull_WithModifiedNotes(t *testing.T) {
 	state := &models.SyncState{
 		LastPullTimestamp: time.Now().Add(-1 * time.Hour),
 	}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -185,11 +130,11 @@ func TestPull_WithModifiedNotes(t *testing.T) {
 	require.NoError(t, err)
 
 	// Should have 9 updates (checksum + 8 content fields)
-	assert.Len(t, sheetsClient.batchUpdates, 9)
+	assert.Len(t, sheetsClient.BatchUpdates, 9)
 
 	// Verify updates contain new values
 	foundGreekUpdate := false
-	for _, update := range sheetsClient.batchUpdates {
+	for _, update := range sheetsClient.BatchUpdates {
 		if update.Column == "D" { // Greek column
 			assert.Equal(t, "γεια σου", update.Value)
 			foundGreekUpdate = true
@@ -198,8 +143,8 @@ func TestPull_WithModifiedNotes(t *testing.T) {
 	assert.True(t, foundGreekUpdate, "Should have updated Greek field")
 
 	// State should be updated
-	assert.NotNil(t, stateManager.savedState)
-	assert.False(t, stateManager.savedState.LastPullTimestamp.IsZero())
+	assert.NotNil(t, stateManager.SavedState)
+	assert.False(t, stateManager.SavedState.LastPullTimestamp.IsZero())
 }
 
 func TestPull_NoteNotFoundInSheet(t *testing.T) {
@@ -212,14 +157,14 @@ func TestPull_NoteNotFoundInSheet(t *testing.T) {
 		"part of speech": 4,
 	}
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		// No data rows
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
 
 	// Setup Anki data with a modified note
@@ -230,10 +175,9 @@ func TestPull_NoteNotFoundInSheet(t *testing.T) {
 		PartOfSpeech: "Noun",
 	}
 
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{9999999999999},
-		notesInfo:       []*models.VocabCard{modifiedCard},
-	}
+	ankiClient := testutil.NewMockPullerAnkiClient()
+	ankiClient.ModifiedNoteIDs = []int64{9999999999999}
+	ankiClient.NotesInfo = []*models.VocabCard{modifiedCard}
 
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
@@ -243,7 +187,7 @@ func TestPull_NoteNotFoundInSheet(t *testing.T) {
 	state := &models.SyncState{
 		LastPullTimestamp: time.Now().Add(-1 * time.Hour),
 	}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -252,7 +196,7 @@ func TestPull_NoteNotFoundInSheet(t *testing.T) {
 	require.NoError(t, err)
 
 	// No updates should be written (note skipped)
-	assert.Len(t, sheetsClient.batchUpdates, 0)
+	assert.Len(t, sheetsClient.BatchUpdates, 0)
 }
 
 func TestPull_DryRun(t *testing.T) {
@@ -265,14 +209,14 @@ func TestPull_DryRun(t *testing.T) {
 		"part of speech": 4,
 	}
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		{float64(1234567890123), "old-checksum", "hello", "γεια", "Interjection"},
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
 
 	// Setup modified Anki card
@@ -283,10 +227,9 @@ func TestPull_DryRun(t *testing.T) {
 		PartOfSpeech: "Interjection",
 	}
 
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{1234567890123},
-		notesInfo:       []*models.VocabCard{modifiedCard},
-	}
+	ankiClient := testutil.NewMockPullerAnkiClient()
+	ankiClient.ModifiedNoteIDs = []int64{1234567890123}
+	ankiClient.NotesInfo = []*models.VocabCard{modifiedCard}
 
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
@@ -296,7 +239,7 @@ func TestPull_DryRun(t *testing.T) {
 	state := &models.SyncState{
 		LastPullTimestamp: time.Now().Add(-1 * time.Hour),
 	}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -306,10 +249,10 @@ func TestPull_DryRun(t *testing.T) {
 	require.NoError(t, err)
 
 	// No updates should be written
-	assert.Len(t, sheetsClient.batchUpdates, 0)
+	assert.Len(t, sheetsClient.BatchUpdates, 0)
 
 	// State should not be updated
-	assert.Nil(t, stateManager.savedState)
+	assert.Nil(t, stateManager.SavedState)
 }
 
 func TestPull_MultipleModifiedNotes(t *testing.T) {
@@ -327,16 +270,16 @@ func TestPull_MultipleModifiedNotes(t *testing.T) {
 		"sub-tag 2":      9,
 	}
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech", "Attributes", "Examples", "Tag", "Sub-Tag 1", "Sub-Tag 2"},
 		{float64(1111111111111), "checksum1", "first", "πρώτο", "Adjective", "", "", "", "", ""},
 		{float64(2222222222222), "checksum2", "second", "δεύτερο", "Adjective", "", "", "", "", ""},
 		{float64(3333333333333), "checksum3", "third", "τρίτο", "Adjective", "", "", "", "", ""},
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
 
 	// Setup Anki data - 2 cards modified
@@ -353,10 +296,9 @@ func TestPull_MultipleModifiedNotes(t *testing.T) {
 		PartOfSpeech: "Adjective",
 	}
 
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{1111111111111, 3333333333333},
-		notesInfo:       []*models.VocabCard{modifiedCard1, modifiedCard2},
-	}
+	ankiClient := testutil.NewMockPullerAnkiClient()
+	ankiClient.ModifiedNoteIDs = []int64{1111111111111, 3333333333333}
+	ankiClient.NotesInfo = []*models.VocabCard{modifiedCard1, modifiedCard2}
 
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
@@ -366,7 +308,7 @@ func TestPull_MultipleModifiedNotes(t *testing.T) {
 	state := &models.SyncState{
 		LastPullTimestamp: time.Now().Add(-1 * time.Hour),
 	}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -375,18 +317,18 @@ func TestPull_MultipleModifiedNotes(t *testing.T) {
 	require.NoError(t, err)
 
 	// Should have 18 updates (2 cards × 9 fields each)
-	assert.Len(t, sheetsClient.batchUpdates, 18)
+	assert.Len(t, sheetsClient.BatchUpdates, 18)
 
 	// State should be updated
-	assert.NotNil(t, stateManager.savedState)
+	assert.NotNil(t, stateManager.SavedState)
 }
 
 func TestPull_FirstPull_DefaultTimestamp(t *testing.T) {
-	sheetsClient := &mockSheetsClient{
-		rows: [][]interface{}{
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows: [][]any{
 			{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		},
-		headers: map[string]int{
+		Headers: map[string]int{
 			"anki id":        0,
 			"checksum":       1,
 			"english":        2,
@@ -395,9 +337,8 @@ func TestPull_FirstPull_DefaultTimestamp(t *testing.T) {
 		},
 	}
 
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{}, // No notes
-	}
+	ankiClient := testutil.NewMockPullerAnkiClient()
+	ankiClient.ModifiedNoteIDs = []int64{}
 
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
@@ -409,7 +350,7 @@ func TestPull_FirstPull_DefaultTimestamp(t *testing.T) {
 	state := &models.SyncState{
 		LastPullTimestamp: time.Time{},
 	}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	puller := NewPuller(sheetsClient, ankiClient, config, state, stateManager, logger)

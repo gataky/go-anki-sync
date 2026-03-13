@@ -9,19 +9,22 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/gataky/sync/internal/logging"
 	"github.com/gataky/sync/internal/mapper"
+	"github.com/gataky/sync/internal/testutil"
 	"github.com/gataky/sync/pkg/models"
 )
 
 func TestNewBothSyncer(t *testing.T) {
-	sheetsClient := &mockSheetsClient{}
-	ankiClient := &mockPullerAnkiClient{}
+	sheetsClient := &testutil.MockSheetsClient{}
+	ankiClient := &testutil.MockPullerAnkiClient{
+		MockAnkiClient: testutil.NewMockAnkiClient(),
+	}
 	config := &models.Config{
 		GoogleSheetID: "test-sheet-id",
 		SheetName:     "Vocabulary",
 		AnkiDeck:      "Greek",
 	}
 	state := &models.SyncState{}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -144,20 +147,21 @@ func TestSync_NewCardsOnly(t *testing.T) {
 		"part of speech": 4,
 	}
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		{nil, "", "hello", "γεια", "Interjection"}, // New card
 		{nil, "", "house", "σπίτι", "Noun"},       // New card
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
 
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{}, // No Anki modifications
-		notesInfo:       []*models.VocabCard{},
+	ankiClient := &testutil.MockPullerAnkiClient{
+		MockAnkiClient:  testutil.NewMockAnkiClient(),
+		ModifiedNoteIDs: []int64{},
+		NotesInfo:       []*models.VocabCard{},
 	}
 
 	config := &models.Config{
@@ -166,7 +170,7 @@ func TestSync_NewCardsOnly(t *testing.T) {
 		AnkiDeck:      "Greek",
 	}
 	state := &models.SyncState{}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -176,7 +180,7 @@ func TestSync_NewCardsOnly(t *testing.T) {
 
 	// Should have created 2 cards
 	// Each card generates 2 updates (Anki ID + checksum)
-	assert.GreaterOrEqual(t, len(sheetsClient.batchUpdates), 4)
+	assert.GreaterOrEqual(t, len(sheetsClient.BatchUpdates), 4)
 }
 
 func TestSync_PullChangesOnly(t *testing.T) {
@@ -196,14 +200,14 @@ func TestSync_PullChangesOnly(t *testing.T) {
 	}
 	mapper.UpdateChecksum(existingCard)
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		{float64(1111111111111), existingCard.StoredChecksum, "hello", "γεια", "Interjection"},
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
 
 	// Modified card in Anki
@@ -215,9 +219,10 @@ func TestSync_PullChangesOnly(t *testing.T) {
 		ModifiedAt:   time.Now(),
 	}
 
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{1111111111111},
-		notesInfo:       []*models.VocabCard{modifiedAnkiCard},
+	ankiClient := &testutil.MockPullerAnkiClient{
+		MockAnkiClient:  testutil.NewMockAnkiClient(),
+		ModifiedNoteIDs: []int64{1111111111111},
+		NotesInfo:       []*models.VocabCard{modifiedAnkiCard},
 	}
 
 	config := &models.Config{
@@ -226,7 +231,7 @@ func TestSync_PullChangesOnly(t *testing.T) {
 		AnkiDeck:      "Greek",
 	}
 	state := &models.SyncState{}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -235,11 +240,11 @@ func TestSync_PullChangesOnly(t *testing.T) {
 	require.NoError(t, err)
 
 	// Should have pulled changes from Anki to Sheet
-	assert.Greater(t, len(sheetsClient.batchUpdates), 0)
+	assert.Greater(t, len(sheetsClient.BatchUpdates), 0)
 
 	// Verify Greek field was updated
 	foundUpdate := false
-	for _, update := range sheetsClient.batchUpdates {
+	for _, update := range sheetsClient.BatchUpdates {
 		if update.Column == "D" && update.Value == "γεια σου" {
 			foundUpdate = true
 			break
@@ -258,14 +263,14 @@ func TestSync_WithConflict(t *testing.T) {
 	}
 
 	// Sheet card with wrong checksum (modified in Sheet)
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		{float64(1111111111111), "wrong-checksum", "hello", "γεια sheet", "Interjection"},
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
 
 	// Anki card also modified
@@ -277,9 +282,10 @@ func TestSync_WithConflict(t *testing.T) {
 		ModifiedAt:   time.Now(),
 	}
 
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{1111111111111},
-		notesInfo:       []*models.VocabCard{modifiedAnkiCard},
+	ankiClient := &testutil.MockPullerAnkiClient{
+		MockAnkiClient:  testutil.NewMockAnkiClient(),
+		ModifiedNoteIDs: []int64{1111111111111},
+		NotesInfo:       []*models.VocabCard{modifiedAnkiCard},
 	}
 
 	config := &models.Config{
@@ -288,7 +294,7 @@ func TestSync_WithConflict(t *testing.T) {
 		AnkiDeck:      "Greek",
 	}
 	state := &models.SyncState{}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -299,7 +305,7 @@ func TestSync_WithConflict(t *testing.T) {
 	// Conflict should be resolved (Anki wins because it has modification time)
 	// Sheet should be updated with Anki's value
 	foundAnkiValue := false
-	for _, update := range sheetsClient.batchUpdates {
+	for _, update := range sheetsClient.BatchUpdates {
 		if update.Column == "D" && update.Value == "γεια anki" {
 			foundAnkiValue = true
 			break
@@ -317,19 +323,20 @@ func TestSync_DryRun(t *testing.T) {
 		"part of speech": 4,
 	}
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		{nil, "", "hello", "γεια", "Interjection"}, // New card
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
 
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{},
-		notesInfo:       []*models.VocabCard{},
+	ankiClient := &testutil.MockPullerAnkiClient{
+		MockAnkiClient:  testutil.NewMockAnkiClient(),
+		ModifiedNoteIDs: []int64{},
+		NotesInfo:       []*models.VocabCard{},
 	}
 
 	config := &models.Config{
@@ -338,7 +345,7 @@ func TestSync_DryRun(t *testing.T) {
 		AnkiDeck:      "Greek",
 	}
 	state := &models.SyncState{}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -348,8 +355,8 @@ func TestSync_DryRun(t *testing.T) {
 	require.NoError(t, err)
 
 	// No changes should be made
-	assert.Len(t, sheetsClient.batchUpdates, 0)
-	assert.Nil(t, stateManager.savedState)
+	assert.Len(t, sheetsClient.BatchUpdates, 0)
+	assert.Nil(t, stateManager.SavedState)
 }
 
 func TestSync_MixedOperations(t *testing.T) {
@@ -369,16 +376,16 @@ func TestSync_MixedOperations(t *testing.T) {
 	}
 	mapper.UpdateChecksum(unchangedCard)
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		{nil, "", "new", "νέο", "Adjective"},                                                       // New card
 		{float64(2222222222222), "wrong", "changed", "αλλαγμένο", "Adjective"},                   // Changed in Sheet
 		{float64(3333333333333), unchangedCard.StoredChecksum, "unchanged", "αμετάβλητο", "Adjective"}, // Unchanged
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
 
 	// Anki has modified the unchanged card
@@ -390,9 +397,10 @@ func TestSync_MixedOperations(t *testing.T) {
 		ModifiedAt:   time.Now(),
 	}
 
-	ankiClient := &mockPullerAnkiClient{
-		modifiedNoteIDs: []int64{3333333333333},
-		notesInfo:       []*models.VocabCard{modifiedInAnki},
+	ankiClient := &testutil.MockPullerAnkiClient{
+		MockAnkiClient:  testutil.NewMockAnkiClient(),
+		ModifiedNoteIDs: []int64{3333333333333},
+		NotesInfo:       []*models.VocabCard{modifiedInAnki},
 	}
 
 	config := &models.Config{
@@ -401,7 +409,7 @@ func TestSync_MixedOperations(t *testing.T) {
 		AnkiDeck:      "Greek",
 	}
 	state := &models.SyncState{}
-	stateManager := &mockStateManager{}
+	stateManager := &testutil.MockStateManager{}
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	syncer := NewBothSyncer(sheetsClient, ankiClient, config, state, stateManager, logger)
@@ -410,5 +418,5 @@ func TestSync_MixedOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	// Should have updates for all operations
-	assert.Greater(t, len(sheetsClient.batchUpdates), 0)
+	assert.Greater(t, len(sheetsClient.BatchUpdates), 0)
 }

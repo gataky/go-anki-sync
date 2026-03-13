@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/gataky/sync/pkg/models"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCalculateChecksum(t *testing.T) {
@@ -86,8 +86,8 @@ func TestCalculateChecksum_ExcludesMetadataFields(t *testing.T) {
 	}
 
 	card2 := &models.VocabCard{
-		RowNumber:      999, // Different row
-		AnkiID:         9876543210987, // Different Anki ID
+		RowNumber:      999,                      // Different row
+		AnkiID:         9876543210987,            // Different Anki ID
 		StoredChecksum: "different-old-checksum", // Different stored checksum
 		English:        "hello",
 		Greek:          "γεια",

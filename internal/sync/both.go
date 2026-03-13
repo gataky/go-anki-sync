@@ -188,19 +188,9 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 			} else {
 				// Update Sheet from Anki (build cell updates)
 				mapper.UpdateChecksum(conflict.AnkiCard)
-				// Note: CellUpdate.Row is 1-indexed excluding header, so subtract 1 from sheet row number
-				rowNum := conflict.SheetCard.RowNumber - 1
-				sheetUpdates = append(sheetUpdates,
-					sheets.CellUpdate{Row: rowNum, Column: "B", Value: conflict.AnkiCard.StoredChecksum},
-					sheets.CellUpdate{Row: rowNum, Column: "C", Value: conflict.AnkiCard.English},
-					sheets.CellUpdate{Row: rowNum, Column: "D", Value: conflict.AnkiCard.Greek},
-					sheets.CellUpdate{Row: rowNum, Column: "E", Value: conflict.AnkiCard.PartOfSpeech},
-					sheets.CellUpdate{Row: rowNum, Column: "F", Value: conflict.AnkiCard.Attributes},
-					sheets.CellUpdate{Row: rowNum, Column: "G", Value: conflict.AnkiCard.Examples},
-					sheets.CellUpdate{Row: rowNum, Column: "H", Value: conflict.AnkiCard.Tag},
-					sheets.CellUpdate{Row: rowNum, Column: "I", Value: conflict.AnkiCard.SubTag1},
-					sheets.CellUpdate{Row: rowNum, Column: "J", Value: conflict.AnkiCard.SubTag2},
-				)
+				// Set row number for building updates
+				conflict.AnkiCard.RowNumber = conflict.SheetCard.RowNumber
+				sheetUpdates = append(sheetUpdates, sheets.BuildCardUpdate(conflict.AnkiCard, false)...)
 			}
 		}
 
@@ -244,18 +234,9 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 			}
 
 			mapper.UpdateChecksum(ankiCard)
-			// Note: CellUpdate.Row is 1-indexed excluding header, so subtract 1 from sheet row number
-			pullUpdates = append(pullUpdates,
-				sheets.CellUpdate{Row: rowNum - 1, Column: "B", Value: ankiCard.StoredChecksum},
-				sheets.CellUpdate{Row: rowNum - 1, Column: "C", Value: ankiCard.English},
-				sheets.CellUpdate{Row: rowNum - 1, Column: "D", Value: ankiCard.Greek},
-				sheets.CellUpdate{Row: rowNum - 1, Column: "E", Value: ankiCard.PartOfSpeech},
-				sheets.CellUpdate{Row: rowNum - 1, Column: "F", Value: ankiCard.Attributes},
-				sheets.CellUpdate{Row: rowNum - 1, Column: "G", Value: ankiCard.Examples},
-				sheets.CellUpdate{Row: rowNum - 1, Column: "H", Value: ankiCard.Tag},
-				sheets.CellUpdate{Row: rowNum - 1, Column: "I", Value: ankiCard.SubTag1},
-				sheets.CellUpdate{Row: rowNum - 1, Column: "J", Value: ankiCard.SubTag2},
-			)
+			// Set row number for building updates
+			ankiCard.RowNumber = rowNum
+			pullUpdates = append(pullUpdates, sheets.BuildCardUpdate(ankiCard, false)...)
 			b.logger.AddStat("pulled", 1)
 		}
 

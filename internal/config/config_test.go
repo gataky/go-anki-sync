@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gataky/sync/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/gataky/sync/pkg/models"
 )
 
 func TestGetConfigDir(t *testing.T) {

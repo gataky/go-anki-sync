@@ -5,119 +5,20 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/gataky/sync/internal/anki"
 	"github.com/gataky/sync/internal/logging"
 	"github.com/gataky/sync/internal/mapper"
-	"github.com/gataky/sync/internal/sheets"
+	"github.com/gataky/sync/internal/testutil"
 	"github.com/gataky/sync/pkg/models"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// Mock implementations for testing
-
-type mockSheetsClient struct {
-	rows                [][]interface{}
-	headers             map[string]int
-	requiredColumnsErr  error
-	checksumColumnAdded bool
-	batchUpdates        []sheets.CellUpdate
-	lastBatchUpdate     []sheets.CellUpdate // The most recent batch update
-}
-
-func (m *mockSheetsClient) ReadSheet(sheetID, sheetName string) ([][]interface{}, error) {
-	return m.rows, nil
-}
-
-func (m *mockSheetsClient) ParseHeaders(rows [][]interface{}) (map[string]int, error) {
-	return m.headers, nil
-}
-
-func (m *mockSheetsClient) ValidateRequiredColumns(headers map[string]int, required []string) error {
-	return m.requiredColumnsErr
-}
-
-func (m *mockSheetsClient) CreateChecksumColumnIfMissing(sheetID, sheetName string, headers map[string]int) error {
-	if _, exists := headers["checksum"]; !exists {
-		m.checksumColumnAdded = true
-		m.headers["checksum"] = 1 // Add checksum at column B
-	}
-	return nil
-}
-
-func (m *mockSheetsClient) BatchUpdateCells(sheetID, sheetName string, updates []sheets.CellUpdate) error {
-	m.batchUpdates = append(m.batchUpdates, updates...)
-	m.lastBatchUpdate = updates // Store the most recent batch
-	return nil
-}
-
-type mockAnkiClient struct {
-	nextNoteID      int64
-	createdNotes    []*models.VocabCard
-	updatedNotes    map[int64]*models.VocabCard
-	deckCreated     string
-	noteTypeCreated string
-	failCards       map[string]bool // Cards that should fail to create (keyed by English)
-	failUpdates     map[int64]bool  // Note IDs that should fail to update
-	deckExists      bool            // If true, CreateDeck returns success without doing anything
-	modelExists     bool            // If true, CreateNoteType returns success without doing anything
-	audioExists     map[string]bool // Audio files that exist (keyed by filename)
-}
-
-func newMockAnkiClient() *mockAnkiClient {
-	return &mockAnkiClient{
-		nextNoteID:   1000000000000,
-		createdNotes: make([]*models.VocabCard, 0),
-		updatedNotes: make(map[int64]*models.VocabCard),
-	}
-}
-
-func (m *mockAnkiClient) CreateDeck(deckName string) error {
-	m.deckCreated = deckName
-	return nil
-}
-
-func (m *mockAnkiClient) CreateNoteType(modelName string) error {
-	m.noteTypeCreated = modelName
-	return nil
-}
-
-func (m *mockAnkiClient) AddNote(deckName, modelName string, card *models.VocabCard, audioData []byte, audioFilename string) (int64, error) {
-	// Check if this card should fail
-	if m.failCards != nil && m.failCards[card.English] {
-		return 0, fmt.Errorf("mock error: failed to create card '%s'", card.English)
-	}
-
-	noteID := m.nextNoteID
-	m.nextNoteID++
-	m.createdNotes = append(m.createdNotes, card)
-	return noteID, nil
-}
-
-func (m *mockAnkiClient) CheckAudioExists(filename string) (bool, error) {
-	// Check if audio exists in the map
-	if m.audioExists != nil {
-		if exists, ok := m.audioExists[filename]; ok {
-			return exists, nil
-		}
-	}
-	// Default: audio doesn't exist
-	return false, nil
-}
-
-func (m *mockAnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard, audioData []byte, audioFilename string) error {
-	// Check if this update should fail
-	if m.failUpdates != nil && m.failUpdates[noteID] {
-		return fmt.Errorf("mock error: failed to update note %d", noteID)
-	}
-
-	m.updatedNotes[noteID] = card
-	return nil
-}
+// Mock implementations are in internal/testutil package
 
 func TestNewPusher(t *testing.T) {
-	sheetsClient := &mockSheetsClient{}
-	ankiClient := newMockAnkiClient()
+	sheetsClient := &testutil.MockSheetsClient{}
+	ankiClient := testutil.NewMockAnkiClient()
 	config := &models.Config{
 		GoogleSheetID: "test-sheet-id",
 		SheetName:     "Vocabulary",
@@ -144,17 +45,17 @@ func TestPush_NewCards(t *testing.T) {
 		"part of speech": 4,
 	}
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"}, // Header
-		{nil, "", "hello", "γεια", "Interjection"}, // New card (no Anki ID)
-		{nil, "", "house", "σπίτι", "Noun"},       // New card (no Anki ID)
+		{nil, "", "hello", "γεια", "Interjection"},                    // New card (no Anki ID)
+		{nil, "", "house", "σπίτι", "Noun"},                           // New card (no Anki ID)
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
-	ankiClient := newMockAnkiClient()
+	ankiClient := testutil.NewMockAnkiClient()
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
 		SheetName:     "Vocabulary",
@@ -169,21 +70,21 @@ func TestPush_NewCards(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify deck and note type created
-	assert.Equal(t, "Greek", ankiClient.deckCreated)
-	assert.Equal(t, anki.VocabSyncModelName, ankiClient.noteTypeCreated)
+	assert.Equal(t, "Greek", ankiClient.DeckCreated)
+	assert.Equal(t, anki.VocabSyncModelName, ankiClient.NoteTypeCreated)
 
 	// Verify cards created in Anki
-	assert.Len(t, ankiClient.createdNotes, 2)
-	assert.Equal(t, "hello", ankiClient.createdNotes[0].English)
-	assert.Equal(t, "house", ankiClient.createdNotes[1].English)
+	assert.Len(t, ankiClient.CreatedNotes, 2)
+	assert.Equal(t, "hello", ankiClient.CreatedNotes[0].English)
+	assert.Equal(t, "house", ankiClient.CreatedNotes[1].English)
 
 	// Verify updates written to sheet (2 cards × 2 updates each = 4 updates)
-	assert.Len(t, sheetsClient.batchUpdates, 4)
+	assert.Len(t, sheetsClient.BatchUpdates, 4)
 
 	// Check that Anki IDs were written
 	ankiIDUpdates := 0
 	checksumUpdates := 0
-	for _, update := range sheetsClient.batchUpdates {
+	for _, update := range sheetsClient.BatchUpdates {
 		if update.Column == "A" {
 			ankiIDUpdates++
 			assert.NotEqual(t, int64(0), update.Value)
@@ -213,16 +114,16 @@ func TestPush_ExistingCards_NoChanges(t *testing.T) {
 	}
 	mapper.UpdateChecksum(card)
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		{float64(1234567890123), card.StoredChecksum, "hello", "γεια", "Interjection"},
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
-	ankiClient := newMockAnkiClient()
+	ankiClient := testutil.NewMockAnkiClient()
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
 		SheetName:     "Vocabulary",
@@ -236,11 +137,11 @@ func TestPush_ExistingCards_NoChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	// No notes should be created or updated
-	assert.Len(t, ankiClient.createdNotes, 0)
-	assert.Len(t, ankiClient.updatedNotes, 0)
+	assert.Len(t, ankiClient.CreatedNotes, 0)
+	assert.Len(t, ankiClient.UpdatedNotes, 0)
 
 	// No updates to sheet
-	assert.Len(t, sheetsClient.batchUpdates, 0)
+	assert.Len(t, sheetsClient.BatchUpdates, 0)
 }
 
 func TestPush_ExistingCards_WithChanges(t *testing.T) {
@@ -252,16 +153,16 @@ func TestPush_ExistingCards_WithChanges(t *testing.T) {
 		"part of speech": 4,
 	}
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		{float64(1234567890123), "old-checksum", "hello", "γεια", "Interjection"}, // Changed content
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
-	ankiClient := newMockAnkiClient()
+	ankiClient := testutil.NewMockAnkiClient()
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
 		SheetName:     "Vocabulary",
@@ -275,15 +176,15 @@ func TestPush_ExistingCards_WithChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	// Note should be updated
-	assert.Len(t, ankiClient.updatedNotes, 1)
-	updatedCard := ankiClient.updatedNotes[1234567890123]
+	assert.Len(t, ankiClient.UpdatedNotes, 1)
+	updatedCard := ankiClient.UpdatedNotes[1234567890123]
 	assert.NotNil(t, updatedCard)
 	assert.Equal(t, "hello", updatedCard.English)
 
 	// Checksum should be written to sheet
-	assert.Len(t, sheetsClient.batchUpdates, 1)
-	assert.Equal(t, "B", sheetsClient.batchUpdates[0].Column)
-	assert.NotEqual(t, "old-checksum", sheetsClient.batchUpdates[0].Value)
+	assert.Len(t, sheetsClient.BatchUpdates, 1)
+	assert.Equal(t, "B", sheetsClient.BatchUpdates[0].Column)
+	assert.NotEqual(t, "old-checksum", sheetsClient.BatchUpdates[0].Value)
 }
 
 func TestPush_DryRun(t *testing.T) {
@@ -295,16 +196,16 @@ func TestPush_DryRun(t *testing.T) {
 		"part of speech": 4,
 	}
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
 		{nil, "", "hello", "γεια", "Interjection"}, // New card
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
-	ankiClient := newMockAnkiClient()
+	ankiClient := testutil.NewMockAnkiClient()
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
 		SheetName:     "Vocabulary",
@@ -319,14 +220,14 @@ func TestPush_DryRun(t *testing.T) {
 	require.NoError(t, err)
 
 	// No notes should be created
-	assert.Len(t, ankiClient.createdNotes, 0)
+	assert.Len(t, ankiClient.CreatedNotes, 0)
 
 	// No updates to sheet
-	assert.Len(t, sheetsClient.batchUpdates, 0)
+	assert.Len(t, sheetsClient.BatchUpdates, 0)
 
 	// Deck and note type should not be created in dry run
-	assert.Empty(t, ankiClient.deckCreated)
-	assert.Empty(t, ankiClient.noteTypeCreated)
+	assert.Empty(t, ankiClient.DeckCreated)
+	assert.Empty(t, ankiClient.NoteTypeCreated)
 }
 
 func TestPush_MixedNewAndExisting(t *testing.T) {
@@ -346,18 +247,18 @@ func TestPush_MixedNewAndExisting(t *testing.T) {
 	}
 	mapper.UpdateChecksum(existingCard)
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"Anki ID", "Checksum", "English", "Greek", "Part of Speech"},
-		{nil, "", "new", "νέο", "Adjective"},                                             // New card
+		{nil, "", "new", "νέο", "Adjective"},                                                      // New card
 		{float64(1111111111111), existingCard.StoredChecksum, "existing", "υπάρχον", "Adjective"}, // Existing, unchanged
-		{float64(2222222222222), "wrong-checksum", "changed", "αλλαγμένο", "Adjective"},          // Existing, changed
+		{float64(2222222222222), "wrong-checksum", "changed", "αλλαγμένο", "Adjective"},           // Existing, changed
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
-	ankiClient := newMockAnkiClient()
+	ankiClient := testutil.NewMockAnkiClient()
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
 		SheetName:     "Vocabulary",
@@ -371,15 +272,15 @@ func TestPush_MixedNewAndExisting(t *testing.T) {
 	require.NoError(t, err)
 
 	// 1 new card created
-	assert.Len(t, ankiClient.createdNotes, 1)
-	assert.Equal(t, "new", ankiClient.createdNotes[0].English)
+	assert.Len(t, ankiClient.CreatedNotes, 1)
+	assert.Equal(t, "new", ankiClient.CreatedNotes[0].English)
 
 	// 1 card updated (the one with wrong checksum)
-	assert.Len(t, ankiClient.updatedNotes, 1)
-	assert.NotNil(t, ankiClient.updatedNotes[2222222222222])
+	assert.Len(t, ankiClient.UpdatedNotes, 1)
+	assert.NotNil(t, ankiClient.UpdatedNotes[2222222222222])
 
 	// Updates: 2 for new card (Anki ID + checksum) + 1 for updated card (checksum) = 3
-	assert.Len(t, sheetsClient.batchUpdates, 3)
+	assert.Len(t, sheetsClient.BatchUpdates, 3)
 }
 
 func TestPush_EmptySheet(t *testing.T) {
@@ -389,15 +290,15 @@ func TestPush_EmptySheet(t *testing.T) {
 		"part of speech": 2,
 	}
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"English", "Greek", "Part of Speech"}, // Header only
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
-	ankiClient := newMockAnkiClient()
+	ankiClient := testutil.NewMockAnkiClient()
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
 		SheetName:     "Vocabulary",
@@ -411,8 +312,8 @@ func TestPush_EmptySheet(t *testing.T) {
 	require.NoError(t, err)
 
 	// No cards should be processed
-	assert.Len(t, ankiClient.createdNotes, 0)
-	assert.Len(t, sheetsClient.batchUpdates, 0)
+	assert.Len(t, ankiClient.CreatedNotes, 0)
+	assert.Len(t, sheetsClient.BatchUpdates, 0)
 }
 
 func TestPush_InvalidRow(t *testing.T) {
@@ -422,16 +323,16 @@ func TestPush_InvalidRow(t *testing.T) {
 		"part of speech": 2,
 	}
 
-	rows := [][]interface{}{
+	rows := [][]any{
 		{"English", "Greek", "Part of Speech"},
 		{"hello", "", "Interjection"}, // Missing required Greek field
 	}
 
-	sheetsClient := &mockSheetsClient{
-		rows:    rows,
-		headers: headers,
+	sheetsClient := &testutil.MockSheetsClient{
+		Rows:    rows,
+		Headers: headers,
 	}
-	ankiClient := newMockAnkiClient()
+	ankiClient := testutil.NewMockAnkiClient()
 	config := &models.Config{
 		GoogleSheetID: "test-sheet",
 		SheetName:     "Vocabulary",
@@ -449,7 +350,7 @@ func TestPush_InvalidRow(t *testing.T) {
 }
 
 func TestCreateNewCards(t *testing.T) {
-	ankiClient := newMockAnkiClient()
+	ankiClient := testutil.NewMockAnkiClient()
 	config := &models.Config{
 		AnkiDeck: "Greek",
 	}
@@ -482,7 +383,7 @@ func TestCreateNewCards(t *testing.T) {
 }
 
 func TestUpdateExistingCards(t *testing.T) {
-	ankiClient := newMockAnkiClient()
+	ankiClient := testutil.NewMockAnkiClient()
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := &Pusher{
@@ -521,36 +422,11 @@ func TestUpdateExistingCards(t *testing.T) {
 	assert.Equal(t, 1, updates[0].Row) // Changed card's row
 
 	// Verify only changed card was updated in Anki
-	assert.Len(t, ankiClient.updatedNotes, 1)
-	assert.NotNil(t, ankiClient.updatedNotes[1234567890123])
+	assert.Len(t, ankiClient.UpdatedNotes, 1)
+	assert.NotNil(t, ankiClient.UpdatedNotes[1234567890123])
 }
 
-// Mock TTS client for testing audio generation
-type mockTTSClient struct {
-	audioGenerated map[string][]byte // keyed by Greek text
-	generateError  error             // If set, GenerateAudio returns this error
-}
-
-func newMockTTSClient() *mockTTSClient {
-	return &mockTTSClient{
-		audioGenerated: make(map[string][]byte),
-	}
-}
-
-func (m *mockTTSClient) GenerateAudio(greekText string) ([]byte, error) {
-	if m.generateError != nil {
-		return nil, m.generateError
-	}
-
-	// Generate fake audio data
-	audioData := []byte(fmt.Sprintf("audio-for-%s", greekText))
-	m.audioGenerated[greekText] = audioData
-	return audioData, nil
-}
-
-func (m *mockTTSClient) Close() error {
-	return nil
-}
+// Mock TTS client is in testutil package
 
 func TestGenerateAudioForCard_Success(t *testing.T) {
 	config := &models.Config{
@@ -560,8 +436,8 @@ func TestGenerateAudioForCard_Success(t *testing.T) {
 		},
 	}
 
-	ankiClient := newMockAnkiClient()
-	ttsClient := newMockTTSClient()
+	ankiClient := testutil.NewMockAnkiClient()
+	ttsClient := testutil.NewMockTTSClient()
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := &Pusher{
@@ -572,16 +448,16 @@ func TestGenerateAudioForCard_Success(t *testing.T) {
 	}
 
 	card := &models.VocabCard{
-		English:    "hello",
-		Greek:      "γεια",
-		RowNumber:  2,
+		English:   "hello",
+		Greek:     "γεια",
+		RowNumber: 2,
 	}
 
 	audioData, _ := pusher.generateAudioForCard(card)
 
 	assert.NotNil(t, audioData)
 	assert.Equal(t, []byte("audio-for-γεια"), audioData)
-	assert.Equal(t, 1, len(ttsClient.audioGenerated))
+	assert.Equal(t, 1, len(ttsClient.AudioGenerated))
 }
 
 func TestGenerateAudioForCard_EmptyGreek(t *testing.T) {
@@ -592,8 +468,8 @@ func TestGenerateAudioForCard_EmptyGreek(t *testing.T) {
 		},
 	}
 
-	ankiClient := newMockAnkiClient()
-	ttsClient := newMockTTSClient()
+	ankiClient := testutil.NewMockAnkiClient()
+	ttsClient := testutil.NewMockTTSClient()
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := &Pusher{
@@ -604,15 +480,15 @@ func TestGenerateAudioForCard_EmptyGreek(t *testing.T) {
 	}
 
 	card := &models.VocabCard{
-		English:    "hello",
-		Greek:      "",
-		RowNumber:  2,
+		English:   "hello",
+		Greek:     "",
+		RowNumber: 2,
 	}
 
 	audioData, _ := pusher.generateAudioForCard(card)
 
 	assert.Nil(t, audioData)
-	assert.Equal(t, 0, len(ttsClient.audioGenerated))
+	assert.Equal(t, 0, len(ttsClient.AudioGenerated))
 }
 
 // Note: Audio existence check was removed for simplicity.
@@ -627,9 +503,9 @@ func TestGenerateAudioForCard_TTSError(t *testing.T) {
 		},
 	}
 
-	ankiClient := newMockAnkiClient()
-	ttsClient := newMockTTSClient()
-	ttsClient.generateError = fmt.Errorf("TTS API error")
+	ankiClient := testutil.NewMockAnkiClient()
+	ttsClient := testutil.NewMockTTSClient()
+	ttsClient.GenerateError = fmt.Errorf("TTS API error")
 	logger := logging.NewSyncLogger(logging.Silent, os.Stdout)
 
 	pusher := &Pusher{
@@ -640,9 +516,9 @@ func TestGenerateAudioForCard_TTSError(t *testing.T) {
 	}
 
 	card := &models.VocabCard{
-		English:    "hello",
-		Greek:      "γεια",
-		RowNumber:  2,
+		English:   "hello",
+		Greek:     "γεια",
+		RowNumber: 2,
 	}
 
 	audioData, _ := pusher.generateAudioForCard(card)
@@ -652,15 +528,15 @@ func TestGenerateAudioForCard_TTSError(t *testing.T) {
 }
 
 func TestCreateNewCards_WithAudio(t *testing.T) {
-	sheetsClient := &mockSheetsClient{}
-	ankiClient := newMockAnkiClient()
-	ttsClient := newMockTTSClient()
+	sheetsClient := &testutil.MockSheetsClient{}
+	ankiClient := testutil.NewMockAnkiClient()
+	ttsClient := testutil.NewMockTTSClient()
 
 	config := &models.Config{
 		AnkiDeck: "Greek",
 		TextToSpeech: &models.TTSConfig{
-			Enabled:          true,
-			RequestDelayMs:   0, // No delay in tests
+			Enabled:        true,
+			RequestDelayMs: 0, // No delay in tests
 		},
 	}
 
@@ -683,17 +559,17 @@ func TestCreateNewCards_WithAudio(t *testing.T) {
 	assert.Len(t, updates, 2) // Anki ID + Checksum
 
 	// Verify TTS was called
-	assert.Equal(t, 1, len(ttsClient.audioGenerated))
-	assert.NotNil(t, ttsClient.audioGenerated["γεια"])
+	assert.Equal(t, 1, len(ttsClient.AudioGenerated))
+	assert.NotNil(t, ttsClient.AudioGenerated["γεια"])
 
 	// Verify card was created
-	assert.Len(t, ankiClient.createdNotes, 1)
+	assert.Len(t, ankiClient.CreatedNotes, 1)
 }
 
 func TestCreateNewCards_TTSDisabled(t *testing.T) {
-	sheetsClient := &mockSheetsClient{}
-	ankiClient := newMockAnkiClient()
-	ttsClient := newMockTTSClient()
+	sheetsClient := &testutil.MockSheetsClient{}
+	ankiClient := testutil.NewMockAnkiClient()
+	ttsClient := testutil.NewMockTTSClient()
 
 	config := &models.Config{
 		AnkiDeck: "Greek",
@@ -721,8 +597,8 @@ func TestCreateNewCards_TTSDisabled(t *testing.T) {
 	assert.Len(t, updates, 2) // Anki ID + Checksum
 
 	// Verify TTS was NOT called
-	assert.Equal(t, 0, len(ttsClient.audioGenerated))
+	assert.Equal(t, 0, len(ttsClient.AudioGenerated))
 
 	// Verify card was still created
-	assert.Len(t, ankiClient.createdNotes, 1)
+	assert.Len(t, ankiClient.CreatedNotes, 1)
 }

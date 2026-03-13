@@ -14,7 +14,7 @@ import (
 //
 // Required fields: English, Greek, Part of Speech
 // Optional fields: Anki ID, Checksum, Attributes, Examples, Tag, Sub-Tag 1, Sub-Tag 2
-func RowToCard(row []interface{}, headers map[string]int, rowNumber int) (*models.VocabCard, error) {
+func RowToCard(row []any, headers map[string]int, rowNumber int) (*models.VocabCard, error) {
 	card := &models.VocabCard{
 		RowNumber: rowNumber,
 	}
@@ -24,26 +24,17 @@ func RowToCard(row []interface{}, headers map[string]int, rowNumber int) (*model
 	if err != nil {
 		return nil, fmt.Errorf("row %d: %w", rowNumber, err)
 	}
-	if strings.TrimSpace(english) == "" {
-		return nil, fmt.Errorf("row %d: English field is required", rowNumber)
-	}
 	card.English = english
 
 	greek, err := getString(row, headers, "greek")
 	if err != nil {
 		return nil, fmt.Errorf("row %d: %w", rowNumber, err)
 	}
-	if strings.TrimSpace(greek) == "" {
-		return nil, fmt.Errorf("row %d: Greek field is required", rowNumber)
-	}
 	card.Greek = greek
 
 	partOfSpeech, err := getString(row, headers, "part of speech")
 	if err != nil {
 		return nil, fmt.Errorf("row %d: %w", rowNumber, err)
-	}
-	if strings.TrimSpace(partOfSpeech) == "" {
-		return nil, fmt.Errorf("row %d: Part of Speech field is required", rowNumber)
 	}
 	card.PartOfSpeech = partOfSpeech
 
@@ -62,7 +53,7 @@ func RowToCard(row []interface{}, headers map[string]int, rowNumber int) (*model
 // CardToRow converts a VocabCard back to a sheet row.
 // The headers map provides column name to index mapping.
 // Returns a slice with values in the correct column positions.
-func CardToRow(card *models.VocabCard, headers map[string]int) []interface{} {
+func CardToRow(card *models.VocabCard, headers map[string]int) []any {
 	// Create a row with the correct number of columns
 	maxIndex := 0
 	for _, idx := range headers {
@@ -70,7 +61,7 @@ func CardToRow(card *models.VocabCard, headers map[string]int) []interface{} {
 			maxIndex = idx
 		}
 	}
-	row := make([]interface{}, maxIndex+1)
+	row := make([]any, maxIndex+1)
 
 	// Fill in the values
 	setCell(row, headers, "anki id", card.AnkiID)
@@ -89,7 +80,7 @@ func CardToRow(card *models.VocabCard, headers map[string]int) []interface{} {
 
 // getString extracts a string value from a row at the column specified by the header name.
 // Returns empty string if column doesn't exist or cell is empty/nil.
-func getString(row []interface{}, headers map[string]int, columnName string) (string, error) {
+func getString(row []any, headers map[string]int, columnName string) (string, error) {
 	idx, exists := headers[columnName]
 	if !exists {
 		return "", nil // Column doesn't exist, return empty string
@@ -110,7 +101,7 @@ func getString(row []interface{}, headers map[string]int, columnName string) (st
 
 // getInt64 extracts an int64 value from a row at the column specified by the header name.
 // Returns 0 if column doesn't exist, cell is empty/nil, or value cannot be parsed.
-func getInt64(row []interface{}, headers map[string]int, columnName string) (int64, error) {
+func getInt64(row []any, headers map[string]int, columnName string) (int64, error) {
 	idx, exists := headers[columnName]
 	if !exists {
 		return 0, nil // Column doesn't exist
@@ -151,7 +142,7 @@ func getInt64(row []interface{}, headers map[string]int, columnName string) (int
 
 // setCell sets a value in a row at the column specified by the header name.
 // Does nothing if the column doesn't exist.
-func setCell(row []interface{}, headers map[string]int, columnName string, value interface{}) {
+func setCell(row []any, headers map[string]int, columnName string, value any) {
 	idx, exists := headers[columnName]
 	if !exists {
 		return // Column doesn't exist, skip

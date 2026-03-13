@@ -54,21 +54,21 @@ func NewSyncLogger(level Level, writer io.Writer) *SyncLogger {
 }
 
 // Info logs informational messages (shown in Verbose and Debug modes)
-func (l *SyncLogger) Info(format string, args ...interface{}) {
+func (l *SyncLogger) Info(format string, args ...any) {
 	if l.level >= Verbose {
 		l.logger.Printf(format, args...)
 	}
 }
 
 // Warn logs warning messages (shown in Verbose and Debug modes)
-func (l *SyncLogger) Warn(format string, args ...interface{}) {
+func (l *SyncLogger) Warn(format string, args ...any) {
 	if l.level >= Verbose {
 		l.logger.Printf("WARNING: "+format, args...)
 	}
 }
 
 // Error logs error messages (buffered for summary, shown in Verbose/Debug)
-func (l *SyncLogger) Error(format string, args ...interface{}) {
+func (l *SyncLogger) Error(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	l.errors = append(l.errors, msg)
 	if l.level >= Verbose {

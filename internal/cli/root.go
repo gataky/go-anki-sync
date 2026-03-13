@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/gataky/sync/internal/logging"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -52,7 +52,7 @@ func getDryRun() bool {
 }
 
 // printError prints an error message and returns the error
-func printError(format string, args ...interface{}) error {
+func printError(format string, args ...any) error {
 	err := fmt.Errorf(format, args...)
 	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	return err

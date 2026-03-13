@@ -133,20 +133,9 @@ func (p *Puller) Pull(dryRun bool) error {
 		// Update checksum
 		mapper.UpdateChecksum(ankiCard)
 
-		// Build updates for content fields and checksum
-		// Assuming standard column layout: A=AnkiID, B=Checksum, C=English, D=Greek, E=PartOfSpeech, etc.
-		// Note: CellUpdate.Row is 1-indexed excluding header, so subtract 1 from sheet row number
-		updates = append(updates,
-			sheets.CellUpdate{Row: rowNumber - 1, Column: "B", Value: ankiCard.StoredChecksum},
-			sheets.CellUpdate{Row: rowNumber - 1, Column: "C", Value: ankiCard.English},
-			sheets.CellUpdate{Row: rowNumber - 1, Column: "D", Value: ankiCard.Greek},
-			sheets.CellUpdate{Row: rowNumber - 1, Column: "E", Value: ankiCard.PartOfSpeech},
-			sheets.CellUpdate{Row: rowNumber - 1, Column: "F", Value: ankiCard.Attributes},
-			sheets.CellUpdate{Row: rowNumber - 1, Column: "G", Value: ankiCard.Examples},
-			sheets.CellUpdate{Row: rowNumber - 1, Column: "H", Value: ankiCard.Tag},
-			sheets.CellUpdate{Row: rowNumber - 1, Column: "I", Value: ankiCard.SubTag1},
-			sheets.CellUpdate{Row: rowNumber - 1, Column: "J", Value: ankiCard.SubTag2},
-		)
+		// Set row number for building updates
+		ankiCard.RowNumber = rowNumber
+		updates = append(updates, sheets.BuildCardUpdate(ankiCard, false)...)
 		p.logger.AddStat("updated", 1)
 	}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/gataky/sync/internal/logging"
 	"github.com/gataky/sync/internal/mapper"
 	"github.com/gataky/sync/internal/sheets"
+	"github.com/gataky/sync/internal/util"
 	"github.com/gataky/sync/pkg/models"
 )
 
@@ -337,39 +338,13 @@ func (p *Pusher) createNewCards(cards []*models.VocabCard, dryRun bool) ([]sheet
 		successCount++
 
 		// Prepare updates for Anki ID and Checksum columns
-		// Note: CellUpdate.Row is 1-indexed excluding header, so subtract 1 from sheet row number
-		updates = append(updates, sheets.CellUpdate{
-			Row:    card.RowNumber - 1,
-			Column: "A", // Anki ID column
-			Value:  noteID,
-		})
-		updates = append(updates, sheets.CellUpdate{
-			Row:    card.RowNumber - 1,
-			Column: "B", // Checksum column
-			Value:  card.StoredChecksum,
-		})
+		updates = append(updates, sheets.BuildAnkiIDAndChecksumUpdate(card.RowNumber, noteID, card.StoredChecksum)...)
 	}
 
 	// Return partial results with combined error if any failures occurred
 	if len(errors) > 0 {
 		p.logger.Info("Created %d/%d cards successfully, %d failed", successCount, len(cards), len(errors))
-		var errMsg string
-		if len(errors) == 1 {
-			errMsg = errors[0].Error()
-		} else {
-			errMsg = fmt.Sprintf("%d cards failed: ", len(errors))
-			for i, err := range errors {
-				if i > 0 {
-					errMsg += "; "
-				}
-				errMsg += err.Error()
-				if i >= 2 && len(errors) > 3 {
-					errMsg += fmt.Sprintf("; and %d more", len(errors)-3)
-					break
-				}
-			}
-		}
-		return updates, fmt.Errorf("%s", errMsg)
+		return updates, fmt.Errorf("%s", util.FormatMultipleErrors(errors, 3))
 	}
 
 	return updates, nil
@@ -442,34 +417,13 @@ func (p *Pusher) updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]
 		mapper.UpdateChecksum(card)
 
 		// Prepare update for Checksum column
-		// Note: CellUpdate.Row is 1-indexed excluding header, so subtract 1 from sheet row number
-		updates = append(updates, sheets.CellUpdate{
-			Row:    card.RowNumber - 1,
-			Column: "B", // Checksum column
-			Value:  card.StoredChecksum,
-		})
+		updates = append(updates, sheets.BuildChecksumOnlyUpdate(card.RowNumber, card.StoredChecksum)...)
 	}
 
 	// Return partial results with combined error if any failures occurred
 	if len(errors) > 0 {
 		p.logger.Info("Updated %d/%d cards successfully, %d failed", successCount, attemptedCount, len(errors))
-		var errMsg string
-		if len(errors) == 1 {
-			errMsg = errors[0].Error()
-		} else {
-			errMsg = fmt.Sprintf("%d cards failed: ", len(errors))
-			for i, err := range errors {
-				if i > 0 {
-					errMsg += "; "
-				}
-				errMsg += err.Error()
-				if i >= 2 && len(errors) > 3 {
-					errMsg += fmt.Sprintf("; and %d more", len(errors)-3)
-					break
-				}
-			}
-		}
-		return updates, fmt.Errorf("%s", errMsg)
+		return updates, fmt.Errorf("%s", util.FormatMultipleErrors(errors, 3))
 	}
 
 	return updates, nil

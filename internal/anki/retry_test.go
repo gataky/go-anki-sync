@@ -218,9 +218,9 @@ func TestRetryWithBackoff_ContextInErrorMessage(t *testing.T) {
 // TestRetryWithBackoff_CaseInsensitiveErrorMatching tests error pattern matching is case-insensitive.
 func TestRetryWithBackoff_CaseInsensitiveErrorMatching(t *testing.T) {
 	testCases := []struct {
-		name         string
-		err          error
-		shouldRetry  bool
+		name        string
+		err         error
+		shouldRetry bool
 	}{
 		{"Lowercase EOF", errors.New("eof"), true},
 		{"Uppercase EOF", errors.New("EOF"), true},

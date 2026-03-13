@@ -3,9 +3,9 @@ package mapper
 import (
 	"testing"
 
+	"github.com/gataky/sync/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/gataky/sync/pkg/models"
 )
 
 func TestRowToCard_ValidData(t *testing.T) {
@@ -22,7 +22,7 @@ func TestRowToCard_ValidData(t *testing.T) {
 		"sub-tag 2":      9,
 	}
 
-	row := []interface{}{
+	row := []any{
 		float64(1234567890123), // Anki ID (Google Sheets returns as float64)
 		"abc123checksum",
 		"hello",
@@ -58,7 +58,7 @@ func TestRowToCard_MinimalData(t *testing.T) {
 		"part of speech": 2,
 	}
 
-	row := []interface{}{
+	row := []any{
 		"test",
 		"τεστ",
 		"Noun",
@@ -87,21 +87,28 @@ func TestRowToCard_MissingRequiredField(t *testing.T) {
 		// Missing "greek"
 	}
 
-	row := []interface{}{
+	row := []any{
 		"test",
 		"", // Empty where greek should be
 		"Noun",
 	}
 
-	_, err := RowToCard(row, headers, 3)
+	// RowToCard should succeed - it doesn't validate, just parses
+	card, err := RowToCard(row, headers, 3)
+	assert.NoError(t, err)
+	assert.NotNil(t, card)
+	assert.Equal(t, "", card.Greek)
+
+	// Validation should catch the missing field
+	err = ValidateCard(card)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "row 3")
+	assert.Contains(t, err.Error(), "Greek field is required")
 }
 
 func TestRowToCard_EmptyRequiredField(t *testing.T) {
 	tests := []struct {
 		name      string
-		row       []interface{}
+		row       []any
 		headers   map[string]int
 		expectErr string
 	}{
@@ -112,7 +119,7 @@ func TestRowToCard_EmptyRequiredField(t *testing.T) {
 				"greek":          1,
 				"part of speech": 2,
 			},
-			row:       []interface{}{"", "γεια", "Interjection"},
+			row:       []any{"", "γεια", "Interjection"},
 			expectErr: "English field is required",
 		},
 		{
@@ -122,7 +129,7 @@ func TestRowToCard_EmptyRequiredField(t *testing.T) {
 				"greek":          1,
 				"part of speech": 2,
 			},
-			row:       []interface{}{"hello", "", "Interjection"},
+			row:       []any{"hello", "", "Interjection"},
 			expectErr: "Greek field is required",
 		},
 		{
@@ -132,7 +139,7 @@ func TestRowToCard_EmptyRequiredField(t *testing.T) {
 				"greek":          1,
 				"part of speech": 2,
 			},
-			row:       []interface{}{"hello", "γεια", ""},
+			row:       []any{"hello", "γεια", ""},
 			expectErr: "Part of Speech field is required",
 		},
 		{
@@ -142,14 +149,20 @@ func TestRowToCard_EmptyRequiredField(t *testing.T) {
 				"greek":          1,
 				"part of speech": 2,
 			},
-			row:       []interface{}{"  ", "γεια", "Interjection"},
+			row:       []any{"  ", "γεια", "Interjection"},
 			expectErr: "English field is required",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := RowToCard(tt.row, tt.headers, 10)
+			// RowToCard should succeed - it doesn't validate, just parses
+			card, err := RowToCard(tt.row, tt.headers, 10)
+			require.NoError(t, err)
+			require.NotNil(t, card)
+
+			// Validation should catch the empty required field
+			err = ValidateCard(card)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.expectErr)
 		})
@@ -166,7 +179,7 @@ func TestRowToCard_NilCells(t *testing.T) {
 		"attributes":     5,
 	}
 
-	row := []interface{}{
+	row := []any{
 		nil, // Anki ID is nil
 		nil, // Checksum is nil
 		"hello",
@@ -196,7 +209,7 @@ func TestRowToCard_ShortRow(t *testing.T) {
 	}
 
 	// Row is shorter than headers expect
-	row := []interface{}{
+	row := []any{
 		"hello",
 		"γεια",
 		"Interjection",
@@ -217,7 +230,7 @@ func TestRowToCard_ShortRow(t *testing.T) {
 func TestGetInt64_DifferentTypes(t *testing.T) {
 	tests := []struct {
 		name     string
-		value    interface{}
+		value    any
 		expected int64
 		wantErr  bool
 	}{
@@ -234,7 +247,7 @@ func TestGetInt64_DifferentTypes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			headers := map[string]int{"test": 0}
-			row := []interface{}{tt.value}
+			row := []any{tt.value}
 
 			result, err := getInt64(row, headers, "test")
 
@@ -251,7 +264,7 @@ func TestGetInt64_DifferentTypes(t *testing.T) {
 func TestGetString_EdgeCases(t *testing.T) {
 	tests := []struct {
 		name     string
-		value    interface{}
+		value    any
 		expected string
 	}{
 		{"string value", "hello", "hello"},
@@ -265,7 +278,7 @@ func TestGetString_EdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			headers := map[string]int{"test": 0}
-			row := []interface{}{tt.value}
+			row := []any{tt.value}
 
 			result, err := getString(row, headers, "test")
 
@@ -330,7 +343,7 @@ func TestCardToRow_EmptyFields(t *testing.T) {
 		English:        "test",
 		Greek:          "τεστ",
 		PartOfSpeech:   "Noun",
-		AnkiID:         0, // Zero value
+		AnkiID:         0,  // Zero value
 		StoredChecksum: "", // Empty string
 	}
 
@@ -357,7 +370,7 @@ func TestRoundTrip_RowToCardToRow(t *testing.T) {
 		"sub-tag 2":      9,
 	}
 
-	originalRow := []interface{}{
+	originalRow := []any{
 		float64(1234567890123),
 		"checksum123",
 		"hello",

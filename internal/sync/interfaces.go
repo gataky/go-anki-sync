@@ -7,8 +7,8 @@ import (
 
 // SheetsClientInterface defines the methods needed from the Sheets client.
 type SheetsClientInterface interface {
-	ReadSheet(sheetID, sheetName string) ([][]interface{}, error)
-	ParseHeaders(rows [][]interface{}) (map[string]int, error)
+	ReadSheet(sheetID, sheetName string) ([][]any, error)
+	ParseHeaders(rows [][]any) (map[string]int, error)
 	ValidateRequiredColumns(headers map[string]int, required []string) error
 	CreateChecksumColumnIfMissing(sheetID, sheetName string, headers map[string]int) error
 	BatchUpdateCells(sheetID, sheetName string, updates []sheets.CellUpdate) error

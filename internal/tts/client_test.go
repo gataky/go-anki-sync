@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/gataky/sync/pkg/models"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestNewTTSClient_Success tests successful client creation.

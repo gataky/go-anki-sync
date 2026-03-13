@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/gataky/sync/internal/config"
 	"github.com/gataky/sync/pkg/models"
+	"github.com/spf13/cobra"
 )
 
 var initCmd = &cobra.Command{
