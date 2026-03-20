@@ -348,6 +348,7 @@ func (p *Pusher) findExistingAudio(greekWord string, source string) string {
 // Returns (audioData, filename) where:
 // - audioData is non-nil only if new audio was generated (needs uploading)
 // - filename is always set if audio should be attached (even if it already exists)
+// Supports versioned filenames and regeneration via card.RegenTTS flag.
 // All errors are logged but do not block card creation.
 func (p *Pusher) generateAudioForCard(card *models.VocabCard) ([]byte, string) {
 	// Validate Greek text
@@ -357,24 +358,47 @@ func (p *Pusher) generateAudioForCard(card *models.VocabCard) ([]byte, string) {
 		return nil, ""
 	}
 
-	// Build filename
-	filename := fmt.Sprintf("%s.mp3", card.Greek)
-
-	// Check if audio file already exists
-	if p.audioFileExists(filename) {
-		p.logger.Info("Audio already exists for '%s', linking to card", card.Greek)
-		// Return nil data (no upload needed) but return filename to link it
-		return nil, filename
-	}
-
-	// Generate audio using TTS
-	audioData, err := p.ttsClient.GenerateAudio(greekText)
-	if err != nil {
-		p.logger.Error("Failed to generate audio for '%s': %v", card.Greek, err)
+	source := p.getProviderSource()
+	if source == "" {
+		p.logger.Warn("Unknown TTS provider, skipping audio for '%s'", card.Greek)
 		return nil, ""
 	}
 
-	p.logger.Info("Generated audio for '%s' (%d bytes)", card.Greek, len(audioData))
+	shouldRegenerate := strings.TrimSpace(card.RegenTTS) != ""
+
+	if shouldRegenerate {
+		// Force regeneration with incremented version
+		version := p.getNextAudioVersion(greekText, source)
+		filename := p.buildAudioFilename(greekText, source, version)
+
+		audioData, err := p.ttsClient.GenerateAudio(greekText)
+		if err != nil {
+			p.logger.Error("Failed to regenerate audio for '%s': %v", greekText, err)
+			return nil, ""
+		}
+
+		p.logger.Info("Regenerated audio for '%s' as %s (%d bytes)", greekText, filename, len(audioData))
+		return audioData, filename
+	}
+
+	// Check for existing audio
+	existingFile := p.findExistingAudio(greekText, source)
+	if existingFile != "" {
+		p.logger.Info("Audio already exists for '%s', linking to card: %s", greekText, existingFile)
+		return nil, existingFile
+	}
+
+	// Generate new versioned audio
+	version := p.getNextAudioVersion(greekText, source)
+	filename := p.buildAudioFilename(greekText, source, version)
+
+	audioData, err := p.ttsClient.GenerateAudio(greekText)
+	if err != nil {
+		p.logger.Error("Failed to generate audio for '%s': %v", greekText, err)
+		return nil, ""
+	}
+
+	p.logger.Info("Generated audio for '%s' as %s (%d bytes)", greekText, filename, len(audioData))
 	return audioData, filename
 }
 
