@@ -290,6 +290,60 @@ func (p *Pusher) getNextAudioVersion(greekWord string, source string) int {
 	return maxVersion + 1
 }
 
+// buildAudioFilename creates a versioned filename for audio.
+// Format: {greekWord}-{source}-{version}.mp3
+func (p *Pusher) buildAudioFilename(greekWord string, source string, version int) string {
+	return fmt.Sprintf("%s-%s-%d.mp3", greekWord, source, version)
+}
+
+// findExistingAudio looks for existing audio in both legacy and versioned formats.
+// Returns filename if found, empty string if no audio exists.
+// Checks legacy format ({word}.mp3) first, then latest versioned file.
+func (p *Pusher) findExistingAudio(greekWord string, source string) string {
+	mediaDir := p.getAnkiMediaDir()
+	if mediaDir == "" {
+		return ""
+	}
+
+	// Check legacy format first: {word}.mp3
+	legacyFilename := fmt.Sprintf("%s.mp3", greekWord)
+	if p.audioFileExists(legacyFilename) {
+		return legacyFilename
+	}
+
+	// Check for latest versioned file
+	files, err := os.ReadDir(mediaDir)
+	if err != nil {
+		return ""
+	}
+
+	pattern := fmt.Sprintf("%s-%s-", greekWord, source)
+	var latestFile string
+	maxVersion := 0
+
+	for _, file := range files {
+		name := file.Name()
+		if !strings.HasPrefix(name, pattern) || !strings.HasSuffix(name, ".mp3") {
+			continue
+		}
+
+		versionPart := strings.TrimPrefix(name, pattern)
+		versionPart = strings.TrimSuffix(versionPart, ".mp3")
+
+		version, err := strconv.Atoi(versionPart)
+		if err != nil {
+			continue
+		}
+
+		if version > maxVersion {
+			maxVersion = version
+			latestFile = name
+		}
+	}
+
+	return latestFile
+}
+
 // generateAudioForCard generates audio for a vocabulary card using TTS.
 // Returns (audioData, filename) where:
 // - audioData is non-nil only if new audio was generated (needs uploading)
