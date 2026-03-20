@@ -226,6 +226,28 @@ func (p *Pusher) audioFileExists(filename string) bool {
 	return err == nil
 }
 
+// getProviderSource returns the source code for the current TTS provider.
+// Returns "etts" for ElevenLabs, "gtts" for Google TTS, or empty string if unknown.
+func (p *Pusher) getProviderSource() string {
+	if p.config.TextToSpeech == nil {
+		return ""
+	}
+
+	provider := strings.ToLower(p.config.TextToSpeech.Provider)
+	if provider == "" {
+		provider = "elevenlabs" // Default
+	}
+
+	switch provider {
+	case "elevenlabs":
+		return "etts"
+	case "google":
+		return "gtts"
+	default:
+		return ""
+	}
+}
+
 // generateAudioForCard generates audio for a vocabulary card using TTS.
 // Returns (audioData, filename) where:
 // - audioData is non-nil only if new audio was generated (needs uploading)
