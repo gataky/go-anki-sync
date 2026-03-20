@@ -6,12 +6,24 @@ anki_profile: "User 1"
 google_token_path: ""
 log_level: verbose
 
-# Greek audio generation with Google Cloud TTS
+# Audio generation for Greek words (supports ElevenLabs and Google Cloud TTS)
 text_to_speech:
   enabled: true
-  voice_name: "el-GR-Wavenet-A"
-  audio_encoding: "MP3"
-  speaking_rate: 1.0
-  pitch: 0.0
-  volume_gain_db: 0.0
+  provider: "elevenlabs"  # or "google" - defaults to elevenlabs if not specified
+
+  # ElevenLabs configuration (recommended)
+  elevenlabs_api_key: "your-api-key-here"
+  elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"  # Example: Rachel voice
+  elevenlabs_model: "eleven_multilingual_v2"  # Optional - supports Greek + 28 languages
+  elevenlabs_stability: 0.5  # Optional - 0-1, higher = more consistent
+  elevenlabs_similarity_boost: 0.75  # Optional - 0-1, higher = more similar to original voice
+
+  # Google Cloud TTS configuration (alternative)
+  # voice_name: "el-GR-Wavenet-A"
+  # audio_encoding: "MP3"
+  # speaking_rate: 1.0
+  # pitch: 0.0
+  # volume_gain_db: 0.0
+
+  # Rate limiting (applies to both providers)
   request_delay_ms: 100
