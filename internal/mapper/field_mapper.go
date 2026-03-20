@@ -46,6 +46,7 @@ func RowToCard(row []any, headers map[string]int, rowNumber int) (*models.VocabC
 	card.Tag, _ = getString(row, headers, "tag")
 	card.SubTag1, _ = getString(row, headers, "sub-tag 1")
 	card.SubTag2, _ = getString(row, headers, "sub-tag 2")
+	card.RegenTTS, _ = getString(row, headers, "regen tts")
 
 	return card, nil
 }
@@ -74,6 +75,7 @@ func CardToRow(card *models.VocabCard, headers map[string]int) []any {
 	setCell(row, headers, "tag", card.Tag)
 	setCell(row, headers, "sub-tag 1", card.SubTag1)
 	setCell(row, headers, "sub-tag 2", card.SubTag2)
+	setCell(row, headers, "regen tts", card.RegenTTS)
 
 	return row
 }
