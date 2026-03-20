@@ -10,23 +10,105 @@ A bidirectional sync tool for managing vocabulary flashcards between Google Shee
 - **Checksum-based Change Detection**: Only syncs cards that have actually changed
 - **Conflict Resolution**: Timestamp-based last-write-wins strategy
 - **Dry-run Mode**: Preview changes before applying them
-- **Greek Audio Generation**: Automatic text-to-speech audio for Greek words using Google Cloud TTS
+- **Greek Audio Generation**: Automatic text-to-speech audio for Greek words using ElevenLabs or Google Cloud TTS
 - **Three Sync Modes**:
   - `push`: Google Sheets → Anki
   - `pull`: Anki → Google Sheets
   - `both`: Bidirectional with conflict resolution
 
-## Greek Audio Generation (Text-to-Speech)
+## Audio Generation (Text-to-Speech)
 
-The tool can automatically generate high-quality audio pronunciation for Greek words using Google Cloud Text-to-Speech.
+The tool automatically generates high-quality audio pronunciation for Greek words.
 
-### Requirements
+### Supported Providers
+
+- **ElevenLabs** (recommended, default) - High-quality neural voices with natural pronunciation
+- **Google Cloud TTS** - WaveNet and Standard voices
+
+### ElevenLabs Setup (Recommended)
+
+ElevenLabs provides the highest quality text-to-speech with natural-sounding voices. It's easier to set up than Google Cloud TTS and produces superior audio quality for Greek pronunciation.
+
+#### Requirements
+
+1. **ElevenLabs Account**: Sign up at [elevenlabs.io](https://elevenlabs.io)
+2. **API Key**: Get your API key from your profile settings
+3. **Voice ID**: Choose a voice from the [Voice Library](https://elevenlabs.io/voice-library)
+
+#### Setup Steps
+
+1. **Create an ElevenLabs account**:
+   - Go to [elevenlabs.io](https://elevenlabs.io) and sign up
+   - Free tier includes 10,000 characters/month
+
+2. **Get your API key**:
+   - Go to your profile settings
+   - Copy your API key
+   - Save it securely (you'll add it to the config)
+
+3. **Choose a voice**:
+   - Browse the [Voice Library](https://elevenlabs.io/voice-library)
+   - Click on a voice to hear samples
+   - Copy the Voice ID (found in the voice details or URL)
+   - Recommended voices for Greek (see below)
+
+4. **Add to `~/.sync/config.yaml`**:
+   ```yaml
+   text_to_speech:
+     provider: "elevenlabs"          # Use ElevenLabs
+     enabled: true
+
+     # ElevenLabs settings
+     elevenlabs_api_key: "your-api-key-here"
+     elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"  # Rachel voice (recommended)
+
+     # Optional voice settings
+     audio_encoding: "MP3"
+     request_delay_ms: 100           # Delay between requests
+   ```
+
+#### Optional Voice Settings
+
+You can fine-tune the voice output with these optional parameters:
+
+```yaml
+text_to_speech:
+  provider: "elevenlabs"
+  enabled: true
+  elevenlabs_api_key: "your-api-key-here"
+  elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"
+
+  # Optional: Fine-tune voice characteristics
+  stability: 0.5           # 0.0-1.0, lower = more variable/expressive
+  similarity_boost: 0.75   # 0.0-1.0, higher = closer to original voice
+  style: 0.0              # 0.0-1.0, exaggeration of speaking style
+  use_speaker_boost: true  # Enhance speaker similarity
+
+  audio_encoding: "MP3"
+  request_delay_ms: 100
+```
+
+#### Recommended Voices
+
+While ElevenLabs can handle Greek text with most voices, these are recommended for clear pronunciation:
+
+- **Rachel** (`21m00Tcm4TlvDq8ikWAM`) - Clear, neutral female voice
+- **Adam** (`pNInz6obpgDQGcFmaJgB`) - Clear male voice
+- **Aria** (`9BWtsMINqrJLrRacOk9x`) - Natural female voice
+
+Browse the full [Voice Library](https://elevenlabs.io/voice-library) to find your preferred voice.
+
+### Google Cloud TTS Setup
+
+Google Cloud Text-to-Speech is an alternative provider with good quality WaveNet voices.
+
+#### Requirements
 
 1. **Google Cloud Project** with Text-to-Speech API enabled
 2. **Service Account** with `roles/cloudtts.user` role
 3. Same service account JSON key file used for Sheets access
 
-### Setup
+#### Setup
 
 1. Enable the Cloud Text-to-Speech API in your Google Cloud project:
    ```bash
@@ -43,6 +125,7 @@ The tool can automatically generate high-quality audio pronunciation for Greek w
 3. Add TTS configuration to `~/.sync/config.yaml`:
    ```yaml
    text_to_speech:
+     provider: "google"              # Use Google Cloud TTS
      enabled: true
      voice_name: "el-GR-Wavenet-A"  # Greek voice
      audio_encoding: "MP3"
@@ -51,6 +134,12 @@ The tool can automatically generate high-quality audio pronunciation for Greek w
      volume_gain_db: 0.0             # -96.0 to 16.0
      request_delay_ms: 100           # Delay between TTS requests
    ```
+
+#### Supported Voices
+
+Google Cloud TTS supports multiple Greek voices:
+- `el-GR-Wavenet-A` (recommended) - High quality WaveNet voice
+- `el-GR-Standard-A` - Standard quality voice
 
 ### How It Works
 
@@ -66,13 +155,31 @@ The tool can automatically generate high-quality audio pronunciation for Greek w
 - **Graceful degradation**: If audio generation fails, the card is still created/updated without audio
 - **Sequential processing**: Cards are processed one at a time with configurable delay
 
-### Supported Voices
-
-Google Cloud TTS supports multiple Greek voices:
-- `el-GR-Wavenet-A` (recommended) - High quality WaveNet voice
-- `el-GR-Standard-A` - Standard quality voice
-
 ### Troubleshooting
+
+#### ElevenLabs Issues
+
+**"Failed to initialize ElevenLabs client"**
+- Verify your API key is correct in the config
+- Check your ElevenLabs account is active
+- Ensure you have characters remaining in your quota
+
+**"Invalid voice ID"**
+- Verify the voice ID is correct (copy from voice details on elevenlabs.io)
+- Try a different voice from the Voice Library
+- Use the recommended voice ID: `21m00Tcm4TlvDq8ikWAM`
+
+**"Audio generation failed"**
+- Check your ElevenLabs quota (free tier: 10,000 characters/month)
+- Verify the Greek text is not empty
+- Try increasing `request_delay_ms` if hitting rate limits
+
+**"Quota exceeded"**
+- Check your usage at [elevenlabs.io](https://elevenlabs.io)
+- Upgrade your plan or wait for monthly quota reset
+- Temporarily switch to Google Cloud TTS provider
+
+#### Google Cloud TTS Issues
 
 **"Failed to initialize TTS client"**
 - Verify Text-to-Speech API is enabled in Google Cloud Console
@@ -268,15 +375,25 @@ anki_connect_url: "http://localhost:8765"
 anki_profile: "User 1"  # Your Anki profile name (default: "User 1")
 log_level: "info"
 
-# Optional: Greek audio generation with Google Cloud TTS
+# Optional: Greek audio generation with ElevenLabs (recommended)
 text_to_speech:
+  provider: "elevenlabs"
   enabled: true
-  voice_name: "el-GR-Wavenet-A"
+  elevenlabs_api_key: "your-api-key-here"
+  elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"  # Rachel voice
   audio_encoding: "MP3"
-  speaking_rate: 1.0
-  pitch: 0.0
-  volume_gain_db: 0.0
   request_delay_ms: 100
+
+# Alternative: Google Cloud TTS
+# text_to_speech:
+#   provider: "google"
+#   enabled: true
+#   voice_name: "el-GR-Wavenet-A"
+#   audio_encoding: "MP3"
+#   speaking_rate: 1.0
+#   pitch: 0.0
+#   volume_gain_db: 0.0
+#   request_delay_ms: 100
 ```
 
 Service account credentials: `~/.sync/service-account.json`
