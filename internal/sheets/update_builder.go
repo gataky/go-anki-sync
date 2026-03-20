@@ -53,3 +53,15 @@ func BuildAnkiIDAndChecksumUpdate(rowNumber int, ankiID int64, checksum string) 
 func BuildChecksumOnlyUpdate(rowNumber int, checksum string) []CellUpdate {
 	return []CellUpdate{{Row: rowNumber - 1, Column: ColChecksum, Value: checksum}}
 }
+
+// BuildRegenTTSClearUpdate creates an update to clear the "Regen TTS" column.
+// Used after successful audio regeneration to reset the flag.
+func BuildRegenTTSClearUpdate(rowNumber int) []CellUpdate {
+	return []CellUpdate{
+		{
+			Row:    rowNumber,
+			Column: "Regen TTS",
+			Value:  "",
+		},
+	}
+}
