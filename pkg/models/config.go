@@ -39,27 +39,27 @@ type Config struct {
 	TextToSpeech *TTSConfig `yaml:"text_to_speech,omitempty"`
 }
 
-// TTSConfig holds configuration for Google Cloud Text-to-Speech API.
+// TTSConfig holds configuration for text-to-speech providers.
 type TTSConfig struct {
-	// Enabled controls whether audio generation is active
-	Enabled bool `yaml:"enabled"`
+	// Provider selection
+	Provider string `yaml:"provider"` // "google" or "elevenlabs", default "elevenlabs"
+	Enabled  bool   `yaml:"enabled"`
 
-	// VoiceName is the Google TTS voice (e.g., "el-GR-Wavenet-A")
-	VoiceName string `yaml:"voice_name"`
+	// Google Cloud TTS fields
+	VoiceName      string  `yaml:"voice_name,omitempty"`
+	AudioEncoding  string  `yaml:"audio_encoding,omitempty"`
+	SpeakingRate   float64 `yaml:"speaking_rate,omitempty"`
+	Pitch          float64 `yaml:"pitch,omitempty"`
+	VolumeGainDb   float64 `yaml:"volume_gain_db,omitempty"`
 
-	// AudioEncoding is the output format (e.g., "MP3")
-	AudioEncoding string `yaml:"audio_encoding"`
+	// ElevenLabs fields
+	ElevenLabsAPIKey     string  `yaml:"elevenlabs_api_key,omitempty"`
+	ElevenLabsVoiceID    string  `yaml:"elevenlabs_voice_id,omitempty"`
+	ElevenLabsModel      string  `yaml:"elevenlabs_model,omitempty"`
+	ElevenLabsStability  float64 `yaml:"elevenlabs_stability,omitempty"`
+	ElevenLabsSimilarity float64 `yaml:"elevenlabs_similarity_boost,omitempty"`
 
-	// SpeakingRate is the speed (0.25 to 4.0, default 1.0)
-	SpeakingRate float64 `yaml:"speaking_rate,omitempty"`
-
-	// Pitch is the voice pitch (-20.0 to 20.0, default 0.0)
-	Pitch float64 `yaml:"pitch,omitempty"`
-
-	// VolumeGainDb is the volume gain in dB (-96.0 to 16.0, default 0.0)
-	VolumeGainDb float64 `yaml:"volume_gain_db,omitempty"`
-
-	// RequestDelayMs is the delay between API calls to avoid rate limiting
+	// Shared fields
 	RequestDelayMs int `yaml:"request_delay_ms,omitempty"`
 }
 
