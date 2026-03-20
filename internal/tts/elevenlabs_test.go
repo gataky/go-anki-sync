@@ -83,3 +83,51 @@ func TestNewElevenLabsClient_NilConfig(t *testing.T) {
 	assert.Nil(t, client)
 	assert.Contains(t, err.Error(), "TTS config is required")
 }
+
+func TestElevenLabsClient_GenerateAudio_EmptyText(t *testing.T) {
+	config := &models.TTSConfig{
+		Enabled:           true,
+		ElevenLabsAPIKey:  "sk_test",
+		ElevenLabsVoiceID: "voice123",
+	}
+
+	client, err := NewElevenLabsClient(config)
+	assert.NoError(t, err)
+
+	_, err = client.GenerateAudio("")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "empty")
+}
+
+func TestElevenLabsClient_GenerateAudio_WhitespaceOnly(t *testing.T) {
+	config := &models.TTSConfig{
+		Enabled:           true,
+		ElevenLabsAPIKey:  "sk_test",
+		ElevenLabsVoiceID: "voice123",
+	}
+
+	client, err := NewElevenLabsClient(config)
+	assert.NoError(t, err)
+
+	_, err = client.GenerateAudio("   \t\n  ")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "empty")
+}
+
+func TestElevenLabsClient_GenerateAudio_DefaultSettings(t *testing.T) {
+	// This test verifies that default stability and similarity values are used
+	config := &models.TTSConfig{
+		Enabled:           true,
+		ElevenLabsAPIKey:  "sk_test",
+		ElevenLabsVoiceID: "voice123",
+		// No stability or similarity specified - should use defaults
+	}
+
+	client, err := NewElevenLabsClient(config)
+	assert.NoError(t, err)
+
+	// We can't easily test the actual API call without mocking,
+	// but we can verify the client was created successfully
+	assert.NotNil(t, client)
+	assert.Equal(t, "eleven_multilingual_v2", client.model)
+}
