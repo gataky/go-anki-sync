@@ -218,3 +218,28 @@ func TestBuildChecksumOnlyUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildRegenTTSClearUpdate(t *testing.T) {
+	updates := BuildRegenTTSClearUpdate(5)
+
+	if len(updates) != 1 {
+		t.Fatalf("BuildRegenTTSClearUpdate() returned %d updates, want 1", len(updates))
+	}
+
+	update := updates[0]
+
+	// Check row number
+	if update.Row != 5 {
+		t.Errorf("Update has row %d, want %d", update.Row, 5)
+	}
+
+	// Check column
+	if update.Column != "Regen TTS" {
+		t.Errorf("Update column is %s, want %s", update.Column, "Regen TTS")
+	}
+
+	// Check value
+	if update.Value != "" {
+		t.Errorf("Update value is %v, want empty string", update.Value)
+	}
+}
