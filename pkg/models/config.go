@@ -46,11 +46,11 @@ type TTSConfig struct {
 	Enabled  bool   `yaml:"enabled"`
 
 	// Google Cloud TTS fields
-	VoiceName      string  `yaml:"voice_name,omitempty"`
-	AudioEncoding  string  `yaml:"audio_encoding,omitempty"`
-	SpeakingRate   float64 `yaml:"speaking_rate,omitempty"`
-	Pitch          float64 `yaml:"pitch,omitempty"`
-	VolumeGainDb   float64 `yaml:"volume_gain_db,omitempty"`
+	VoiceName     string  `yaml:"voice_name,omitempty"`
+	AudioEncoding string  `yaml:"audio_encoding,omitempty"`
+	SpeakingRate  float64 `yaml:"speaking_rate,omitempty"`
+	Pitch         float64 `yaml:"pitch,omitempty"`
+	VolumeGainDb  float64 `yaml:"volume_gain_db,omitempty"`
 
 	// ElevenLabs fields
 	ElevenLabsAPIKey     string  `yaml:"elevenlabs_api_key,omitempty"`
@@ -61,6 +61,36 @@ type TTSConfig struct {
 
 	// Shared fields
 	RequestDelayMs int `yaml:"request_delay_ms,omitempty"`
+}
+
+// Validate checks TTS configuration
+func (t *TTSConfig) Validate() error {
+	if !t.Enabled {
+		return nil // No validation needed if disabled
+	}
+
+	provider := strings.ToLower(t.Provider)
+	if provider == "" {
+		provider = "elevenlabs" // Default
+	}
+
+	switch provider {
+	case "google":
+		if strings.TrimSpace(t.VoiceName) == "" {
+			return fmt.Errorf("voice_name is required for Google TTS provider")
+		}
+	case "elevenlabs":
+		if strings.TrimSpace(t.ElevenLabsAPIKey) == "" {
+			return fmt.Errorf("elevenlabs_api_key is required for ElevenLabs provider")
+		}
+		if strings.TrimSpace(t.ElevenLabsVoiceID) == "" {
+			return fmt.Errorf("elevenlabs_voice_id is required for ElevenLabs provider")
+		}
+	default:
+		return fmt.Errorf("unknown TTS provider: %s (must be 'google' or 'elevenlabs')", t.Provider)
+	}
+
+	return nil
 }
 
 // Validate checks that all required configuration fields are present and valid.
@@ -90,6 +120,13 @@ func (c *Config) Validate() error {
 
 	if len(errors) > 0 {
 		return fmt.Errorf("configuration validation failed: %s", strings.Join(errors, "; "))
+	}
+
+	// Validate TTS config if present
+	if c.TextToSpeech != nil {
+		if err := c.TextToSpeech.Validate(); err != nil {
+			return err
+		}
 	}
 
 	return nil
