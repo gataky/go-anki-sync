@@ -515,10 +515,13 @@ func (p *Pusher) updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]
 	ttsEnabled := p.ttsClient != nil && p.config.TextToSpeech != nil && p.config.TextToSpeech.Enabled
 
 	for _, card := range cards {
-		// Check if card has changed
-		if !mapper.HasChanged(card) {
+		// Check if card has changed or needs audio regeneration
+		hasChanged := mapper.HasChanged(card)
+		needsRegeneration := ttsEnabled && strings.TrimSpace(card.RegenTTS) != ""
+
+		if !hasChanged && !needsRegeneration {
 			p.logger.AddStat("unchanged", 1)
-			continue // Card unchanged, skip
+			continue // Card unchanged and no regeneration requested, skip
 		}
 
 		attemptedCount++
