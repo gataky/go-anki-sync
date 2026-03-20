@@ -38,6 +38,10 @@ type VocabCard struct {
 	// SubTag2 is the third-level category - Optional
 	SubTag2 string
 
+	// RegenTTS indicates whether to force audio regeneration
+	// Any non-empty value triggers regeneration, automatically cleared after success
+	RegenTTS string
+
 	// ModifiedAt is the last modification timestamp
 	ModifiedAt time.Time
 }
