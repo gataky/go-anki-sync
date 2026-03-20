@@ -481,6 +481,12 @@ func (p *Pusher) createNewCards(cards []*models.VocabCard, dryRun bool) ([]sheet
 
 		// Prepare updates for Anki ID and Checksum columns
 		updates = append(updates, sheets.BuildAnkiIDAndChecksumUpdate(card.RowNumber, noteID, card.StoredChecksum)...)
+
+		// Clear RegenTTS flag if it was set
+		if ttsEnabled && strings.TrimSpace(card.RegenTTS) != "" {
+			updates = append(updates, sheets.BuildRegenTTSClearUpdate(card.RowNumber)...)
+			p.logger.Info("Cleared Regen TTS flag for card '%s' (row %d)", card.English, card.RowNumber)
+		}
 	}
 
 	// Return partial results with combined error if any failures occurred
