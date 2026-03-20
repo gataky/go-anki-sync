@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -246,6 +247,47 @@ func (p *Pusher) getProviderSource() string {
 	default:
 		return ""
 	}
+}
+
+// getNextAudioVersion finds the highest version number for a Greek word + source.
+// Scans Anki media directory for files matching {greekWord}-{source}-*.mp3
+// Returns max(versions) + 1, or 1 if no versioned files exist.
+func (p *Pusher) getNextAudioVersion(greekWord string, source string) int {
+	mediaDir := p.getAnkiMediaDir()
+	if mediaDir == "" {
+		return 1
+	}
+
+	// Pattern: {greek}-{source}-*.mp3
+	pattern := fmt.Sprintf("%s-%s-", greekWord, source)
+
+	files, err := os.ReadDir(mediaDir)
+	if err != nil {
+		return 1
+	}
+
+	maxVersion := 0
+	for _, file := range files {
+		name := file.Name()
+		if !strings.HasPrefix(name, pattern) || !strings.HasSuffix(name, ".mp3") {
+			continue
+		}
+
+		// Extract version number from: {greek}-{source}-{version}.mp3
+		versionPart := strings.TrimPrefix(name, pattern)
+		versionPart = strings.TrimSuffix(versionPart, ".mp3")
+
+		version, err := strconv.Atoi(versionPart)
+		if err != nil {
+			continue // Skip malformed filenames
+		}
+
+		if version > maxVersion {
+			maxVersion = version
+		}
+	}
+
+	return maxVersion + 1
 }
 
 // generateAudioForCard generates audio for a vocabulary card using TTS.
