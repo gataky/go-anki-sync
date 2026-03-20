@@ -602,3 +602,90 @@ func TestCreateNewCards_TTSDisabled(t *testing.T) {
 	// Verify card was still created
 	assert.Len(t, ankiClient.CreatedNotes, 1)
 }
+
+func TestPusher_GetProviderSource(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider string
+		want     string
+	}{
+		{
+			name:     "elevenlabs provider",
+			provider: "elevenlabs",
+			want:     "etts",
+		},
+		{
+			name:     "google provider",
+			provider: "google",
+			want:     "gtts",
+		},
+		{
+			name:     "empty provider defaults to elevenlabs",
+			provider: "",
+			want:     "etts",
+		},
+		{
+			name:     "unknown provider",
+			provider: "unknown",
+			want:     "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &models.Config{
+				TextToSpeech: &models.TTSConfig{
+					Provider: tt.provider,
+					Enabled:  true,
+				},
+			}
+			pusher := &Pusher{
+				config: cfg,
+			}
+
+			got := pusher.getProviderSource()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestPusher_BuildAudioFilename(t *testing.T) {
+	pusher := &Pusher{}
+
+	tests := []struct {
+		name      string
+		greekWord string
+		source    string
+		version   int
+		want      string
+	}{
+		{
+			name:      "elevenlabs version 1",
+			greekWord: "γεια",
+			source:    "etts",
+			version:   1,
+			want:      "γεια-etts-1.mp3",
+		},
+		{
+			name:      "google version 2",
+			greekWord: "γεια",
+			source:    "gtts",
+			version:   2,
+			want:      "γεια-gtts-2.mp3",
+		},
+		{
+			name:      "complex greek word",
+			greekWord: "Καλημέρα",
+			source:    "etts",
+			version:   5,
+			want:      "Καλημέρα-etts-5.mp3",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := pusher.buildAudioFilename(tt.greekWord, tt.source, tt.version)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
