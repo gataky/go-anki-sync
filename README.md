@@ -290,6 +290,28 @@ Your spreadsheet should have these columns (order doesn't matter):
 | Tag | No | Top-level tag |
 | Sub-Tag 1 | No | Second-level tag |
 | Sub-Tag 2 | No | Third-level tag |
+| Regen TTS | No | Any value triggers audio regeneration |
+
+### Audio Regeneration
+
+The **Regen TTS** column allows you to force regeneration of text-to-speech audio files for specific cards:
+
+- **Purpose**: When you want to regenerate audio (e.g., after correcting pronunciation, changing voice settings, or fixing Greek text)
+- **How to use**: Add any value (like "x", "1", or "regen") to the Regen TTS column for cards you want to regenerate
+- **What happens**: During the next `push` operation:
+  1. The tool detects the marker in the Regen TTS column
+  2. Deletes the existing audio file from Anki's media collection
+  3. Generates fresh audio using your configured TTS provider
+  4. Updates the card with the new audio
+  5. Clears the Regen TTS cell after successful regeneration
+- **Batch regeneration**: You can mark multiple cards at once to regenerate their audio in a single sync operation
+
+**Example workflow:**
+1. Notice a card has incorrect pronunciation
+2. Fix the Greek text in the Google Sheet
+3. Add "x" to the Regen TTS column for that row
+4. Run `./sync push`
+5. The audio is regenerated and the "x" is automatically cleared
 
 **Examples Field Formatting:**
 - Single example: Displays as plain text
@@ -307,10 +329,10 @@ Your spreadsheet should have these columns (order doesn't matter):
 
 ### Example
 
-| Anki ID | Checksum | English | Greek | Part of Speech | Attributes | Examples | Tag | Sub-Tag 1 | Sub-Tag 2 |
-|---------|----------|---------|-------|----------------|------------|----------|-----|-----------|-----------|
-|  | | hello | γεια | Interjection | Informal | Hello, how are you?<br>Γεια σου! | Greetings | Basic | |
-|  | | house | σπίτι | Noun | Neuter | This is my house.<br>Where is your house? | City | Buildings | Residential |
+| Anki ID | Checksum | English | Greek | Part of Speech | Attributes | Examples | Tag | Sub-Tag 1 | Sub-Tag 2 | Regen TTS |
+|---------|----------|---------|-------|----------------|------------|----------|-----|-----------|-----------|-----------|
+|  | | hello | γεια | Interjection | Informal | Hello, how are you?<br>Γεια σου! | Greetings | Basic | | |
+|  | | house | σπίτι | Noun | Neuter | This is my house.<br>Where is your house? | City | Buildings | Residential | |
 
 ## Command Reference
 
