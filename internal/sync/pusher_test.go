@@ -367,7 +367,14 @@ func TestCreateNewCards(t *testing.T) {
 		{RowNumber: 3, English: "house", Greek: "σπίτι", PartOfSpeech: "Noun"},
 	}
 
-	updates, err := pusher.createNewCards(cards, false)
+	headers := map[string]int{
+		"anki id": 0,
+		"checksum": 1,
+		"english": 2,
+		"greek": 3,
+	}
+
+	updates, err := pusher.createNewCards(cards, headers, false)
 	require.NoError(t, err)
 
 	// Should have 4 updates (2 cards × 2 fields each)
@@ -413,7 +420,14 @@ func TestUpdateExistingCards(t *testing.T) {
 
 	cards := []*models.VocabCard{changedCard, unchangedCard}
 
-	updates, err := pusher.updateExistingCards(cards, false)
+	headers := map[string]int{
+		"anki id": 0,
+		"checksum": 1,
+		"english": 2,
+		"greek": 3,
+	}
+
+	updates, err := pusher.updateExistingCards(cards, headers, false)
 	require.NoError(t, err)
 
 	// Should have 1 update (only changed card)
@@ -553,7 +567,14 @@ func TestCreateNewCards_WithAudio(t *testing.T) {
 		},
 	}
 
-	updates, err := pusher.createNewCards(cards, false)
+	headers := map[string]int{
+		"anki id": 0,
+		"checksum": 1,
+		"english": 2,
+		"greek": 3,
+	}
+
+	updates, err := pusher.createNewCards(cards, headers, false)
 
 	require.NoError(t, err)
 	assert.Len(t, updates, 2) // Anki ID + Checksum
@@ -591,7 +612,14 @@ func TestCreateNewCards_TTSDisabled(t *testing.T) {
 		},
 	}
 
-	updates, err := pusher.createNewCards(cards, false)
+	headers := map[string]int{
+		"anki id": 0,
+		"checksum": 1,
+		"english": 2,
+		"greek": 3,
+	}
+
+	updates, err := pusher.createNewCards(cards, headers, false)
 
 	require.NoError(t, err)
 	assert.Len(t, updates, 2) // Anki ID + Checksum

@@ -143,10 +143,10 @@ func (p *Pusher) Push(dryRun bool) error {
 	}
 
 	// Process new cards - collect partial results even on error
-	newCardUpdates, newCardErr := p.createNewCards(newCards, dryRun)
+	newCardUpdates, newCardErr := p.createNewCards(newCards, headers, dryRun)
 
 	// Process existing cards - collect partial results even on error
-	existingCardUpdates, existingCardErr := p.updateExistingCards(existingCards, dryRun)
+	existingCardUpdates, existingCardErr := p.updateExistingCards(existingCards, headers, dryRun)
 
 	// Write partial updates to Sheet even if there were errors
 	// This allows us to resume from where we left off on retry
@@ -405,7 +405,7 @@ func (p *Pusher) generateAudioForCard(card *models.VocabCard) ([]byte, string) {
 // createNewCards processes new cards (AnkiID == 0) and creates them in Anki.
 // Returns a list of CellUpdates for writing Anki IDs and checksums back to the Sheet.
 // If errors occur, partial results are still returned along with a combined error.
-func (p *Pusher) createNewCards(cards []*models.VocabCard, dryRun bool) ([]sheets.CellUpdate, error) {
+func (p *Pusher) createNewCards(cards []*models.VocabCard, headers map[string]int, dryRun bool) ([]sheets.CellUpdate, error) {
 	if len(cards) == 0 {
 		return []sheets.CellUpdate{}, nil
 	}
@@ -484,7 +484,7 @@ func (p *Pusher) createNewCards(cards []*models.VocabCard, dryRun bool) ([]sheet
 
 		// Clear RegenTTS flag if it was set
 		if ttsEnabled && strings.TrimSpace(card.RegenTTS) != "" {
-			updates = append(updates, sheets.BuildRegenTTSClearUpdate(card.RowNumber)...)
+			updates = append(updates, sheets.BuildRegenTTSClearUpdate(card.RowNumber, headers)...)
 			p.logger.Info("Cleared Regen TTS flag for card '%s' (row %d)", card.English, card.RowNumber)
 		}
 	}
@@ -501,7 +501,7 @@ func (p *Pusher) createNewCards(cards []*models.VocabCard, dryRun bool) ([]sheet
 // updateExistingCards processes existing cards and updates them in Anki if changed.
 // Returns a list of CellUpdates for writing updated checksums back to the Sheet.
 // If errors occur, partial results are still returned along with a combined error.
-func (p *Pusher) updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]sheets.CellUpdate, error) {
+func (p *Pusher) updateExistingCards(cards []*models.VocabCard, headers map[string]int, dryRun bool) ([]sheets.CellUpdate, error) {
 	if len(cards) == 0 {
 		return []sheets.CellUpdate{}, nil
 	}
@@ -572,7 +572,7 @@ func (p *Pusher) updateExistingCards(cards []*models.VocabCard, dryRun bool) ([]
 
 		// Clear RegenTTS flag if it was set
 		if ttsEnabled && strings.TrimSpace(card.RegenTTS) != "" {
-			updates = append(updates, sheets.BuildRegenTTSClearUpdate(card.RowNumber)...)
+			updates = append(updates, sheets.BuildRegenTTSClearUpdate(card.RowNumber, headers)...)
 			p.logger.Info("Cleared Regen TTS flag for card '%s' (row %d)", card.English, card.RowNumber)
 		}
 	}

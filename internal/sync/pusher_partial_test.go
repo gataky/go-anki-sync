@@ -37,7 +37,14 @@ func TestCreateNewCards_PartialFailure(t *testing.T) {
 		{RowNumber: 4, English: "success2", Greek: "επιτυχία2", PartOfSpeech: "Noun"},
 	}
 
-	updates, err := pusher.createNewCards(cards, false)
+	headers := map[string]int{
+		"anki id": 0,
+		"checksum": 1,
+		"english": 2,
+		"greek": 3,
+	}
+
+	updates, err := pusher.createNewCards(cards, headers, false)
 
 	// Should return an error (because one card failed)
 	require.Error(t, err)
@@ -110,7 +117,14 @@ func TestUpdateExistingCards_PartialFailure(t *testing.T) {
 
 	cards := []*models.VocabCard{card1, card2, card3}
 
-	updates, err := pusher.updateExistingCards(cards, false)
+	headers := map[string]int{
+		"anki id": 0,
+		"checksum": 1,
+		"english": 2,
+		"greek": 3,
+	}
+
+	updates, err := pusher.updateExistingCards(cards, headers, false)
 
 	// Should return an error (because one update failed)
 	require.Error(t, err)

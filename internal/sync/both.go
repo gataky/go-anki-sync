@@ -149,7 +149,7 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 
 		// Create new cards
 		if len(newCards) > 0 {
-			updates, err := b.pusher.createNewCards(newCards, dryRun)
+			updates, err := b.pusher.createNewCards(newCards, headers, dryRun)
 			if err != nil {
 				return fmt.Errorf("failed to create new cards: %w", err)
 			}
@@ -163,7 +163,7 @@ func (b *BothSyncer) Sync(dryRun bool) error {
 
 		// Update existing changed cards
 		if len(existingChangedCards) > 0 {
-			updates, err := b.pusher.updateExistingCards(existingChangedCards, dryRun)
+			updates, err := b.pusher.updateExistingCards(existingChangedCards, headers, dryRun)
 			if err != nil {
 				return fmt.Errorf("failed to update existing cards: %w", err)
 			}

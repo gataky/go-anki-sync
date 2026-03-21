@@ -220,7 +220,22 @@ func TestBuildChecksumOnlyUpdate(t *testing.T) {
 }
 
 func TestBuildRegenTTSClearUpdate(t *testing.T) {
-	updates := BuildRegenTTSClearUpdate(5)
+	// Create headers map with "regen tts" at column index 10 (column K)
+	headers := map[string]int{
+		"anki id":       0,
+		"checksum":      1,
+		"english":       2,
+		"greek":         3,
+		"part of speech": 4,
+		"attributes":    5,
+		"examples":      6,
+		"tag":           7,
+		"sub-tag 1":     8,
+		"sub-tag 2":     9,
+		"regen tts":     10,
+	}
+
+	updates := BuildRegenTTSClearUpdate(5, headers)
 
 	if len(updates) != 1 {
 		t.Fatalf("BuildRegenTTSClearUpdate() returned %d updates, want 1", len(updates))
@@ -233,13 +248,30 @@ func TestBuildRegenTTSClearUpdate(t *testing.T) {
 		t.Errorf("Update has row %d, want %d", update.Row, 5)
 	}
 
-	// Check column
-	if update.Column != "Regen TTS" {
-		t.Errorf("Update column is %s, want %s", update.Column, "Regen TTS")
+	// Check column (column index 10 = K)
+	if update.Column != "K" {
+		t.Errorf("Update column is %s, want K", update.Column)
 	}
 
 	// Check value
 	if update.Value != "" {
 		t.Errorf("Update value is %v, want empty string", update.Value)
+	}
+}
+
+func TestBuildRegenTTSClearUpdate_MissingColumn(t *testing.T) {
+	// Create headers map without "regen tts" column
+	headers := map[string]int{
+		"anki id":       0,
+		"checksum":      1,
+		"english":       2,
+		"greek":         3,
+	}
+
+	updates := BuildRegenTTSClearUpdate(5, headers)
+
+	// Should return nil if column doesn't exist
+	if updates != nil {
+		t.Errorf("BuildRegenTTSClearUpdate() returned %v, want nil when column missing", updates)
 	}
 }
