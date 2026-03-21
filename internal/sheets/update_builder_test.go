@@ -243,9 +243,9 @@ func TestBuildRegenTTSClearUpdate(t *testing.T) {
 
 	update := updates[0]
 
-	// Check row number
-	if update.Row != 5 {
-		t.Errorf("Update has row %d, want %d", update.Row, 5)
+	// Check row number (rowNumber 5 becomes 4 in 0-indexed)
+	if update.Row != 4 {
+		t.Errorf("Update has row %d, want %d", update.Row, 4)
 	}
 
 	// Check column (column index 10 = K)

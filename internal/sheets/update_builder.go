@@ -80,7 +80,7 @@ func BuildRegenTTSClearUpdate(rowNumber int, headers map[string]int) []CellUpdat
 
 	return []CellUpdate{
 		{
-			Row:    rowNumber,
+			Row:    rowNumber - 1, // CellUpdate uses 0-indexed rows
 			Column: colLetter,
 			Value:  "",
 		},
