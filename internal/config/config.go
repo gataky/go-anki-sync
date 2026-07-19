@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	configDirName  = ".sync"
+	configDirName  = ".config/sync"
 	configFileName = "config.yaml"
 )
 
@@ -25,7 +25,7 @@ func GetConfigDir() (string, error) {
 	return filepath.Join(homeDir, configDirName), nil
 }
 
-// GetDefaultConfigPath returns the default configuration file path (~/.sync/config.yaml).
+// GetDefaultConfigPath returns the default configuration file path (~/.config/sync/config.yaml).
 func GetDefaultConfigPath() (string, error) {
 	configDir, err := GetConfigDir()
 	if err != nil {
@@ -45,7 +45,7 @@ func GetDefaultCredentialsPath() (string, error) {
 	return filepath.Join(configDir, "service-account.json"), nil
 }
 
-// EnsureConfigDir creates the configuration directory (~/.sync/) if it doesn't exist.
+// EnsureConfigDir creates the configuration directory (~/.config/sync/) if it doesn't exist.
 // The directory is created with 0755 permissions (rwxr-xr-x).
 func EnsureConfigDir() error {
 	configDir, err := GetConfigDir()
