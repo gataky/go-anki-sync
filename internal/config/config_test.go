@@ -14,14 +14,14 @@ func TestGetConfigDir(t *testing.T) {
 	configDir, err := GetConfigDir()
 	require.NoError(t, err)
 	assert.NotEmpty(t, configDir)
-	assert.Contains(t, configDir, ".sync")
+	assert.Contains(t, configDir, filepath.Join(".config", "sync"))
 }
 
 func TestGetDefaultConfigPath(t *testing.T) {
 	configPath, err := GetDefaultConfigPath()
 	require.NoError(t, err)
 	assert.NotEmpty(t, configPath)
-	assert.Contains(t, configPath, ".sync")
+	assert.Contains(t, configPath, filepath.Join(".config", "sync"))
 	assert.Contains(t, configPath, "config.yaml")
 }
 

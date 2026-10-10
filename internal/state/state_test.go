@@ -15,7 +15,7 @@ func TestGetDefaultStatePath(t *testing.T) {
 	statePath, err := GetDefaultStatePath()
 	require.NoError(t, err)
 	assert.NotEmpty(t, statePath)
-	assert.Contains(t, statePath, ".sync")
+	assert.Contains(t, statePath, filepath.Join(".config", "sync"))
 	assert.Contains(t, statePath, "state.json")
 }
 

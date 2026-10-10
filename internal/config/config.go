@@ -14,7 +14,7 @@ const (
 	configFileName = "config.yaml"
 )
 
-// GetConfigDir returns the configuration directory path (~/.sync/).
+// GetConfigDir returns the configuration directory path (~/.config/sync/).
 // The home directory is expanded to an absolute path.
 func GetConfigDir() (string, error) {
 	homeDir, err := os.UserHomeDir()

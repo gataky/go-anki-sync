@@ -8,20 +8,21 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/gataky/sync/internal/config"
 	"github.com/gataky/sync/pkg/models"
 	"gopkg.in/yaml.v3"
 )
 
 const stateFileName = "state.json"
 
-// GetDefaultStatePath returns the default state file path (~/.sync/state.json).
+// GetDefaultStatePath returns the default state file path (~/.config/sync/state.json).
 func GetDefaultStatePath() (string, error) {
-	homeDir, err := os.UserHomeDir()
+	configDir, err := config.GetConfigDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get user home directory: %w", err)
+		return "", err
 	}
 
-	return filepath.Join(homeDir, ".sync", stateFileName), nil
+	return filepath.Join(configDir, stateFileName), nil
 }
 
 // LoadState reads and parses a JSON state file.
