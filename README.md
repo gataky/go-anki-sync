@@ -52,7 +52,7 @@ ElevenLabs provides the highest quality text-to-speech with natural-sounding voi
    - Copy the Voice ID (found in the voice details or URL)
    - Recommended voices for Greek (see below)
 
-4. **Add to `~/.sync/config.yaml`**:
+4. **Add to `~/.config/sync/config.yaml`**:
    ```yaml
    text_to_speech:
      provider: "elevenlabs"          # Use ElevenLabs
@@ -122,7 +122,7 @@ Google Cloud Text-to-Speech is an alternative provider with good quality WaveNet
    - Click Edit → Add Another Role
    - Select `Cloud Text-to-Speech User`
 
-3. Add TTS configuration to `~/.sync/config.yaml`:
+3. Add TTS configuration to `~/.config/sync/config.yaml`:
    ```yaml
    text_to_speech:
      provider: "google"              # Use Google Cloud TTS
@@ -228,7 +228,7 @@ go build -o sync ./cmd/sync
 5. Click **Create Service Account** (any name works)
 6. Click on the service account → **Keys** → **Add Key** → **Create New Key** → **JSON**
 7. Download the JSON key file
-8. Move it to `~/.sync/service-account.json`
+8. Move it to `~/.config/sync/service-account.json`
 9. **CRITICAL**: Open your Google Sheet and click **Share**
    - Add the service account email (looks like `your-service@project.iam.gserviceaccount.com`)
    - Give it **Editor** permissions
@@ -376,7 +376,7 @@ Pull modified cards from Anki to Google Sheets.
 
 - Queries Anki for cards modified since last pull
 - Updates corresponding Sheet rows
-- Tracks last pull timestamp in `~/.sync/state.json`
+- Tracks last pull timestamp in `~/.config/sync/state.json`
 
 #### `both`
 Bidirectional sync with conflict resolution.
@@ -392,7 +392,7 @@ Bidirectional sync with conflict resolution.
 
 ## Configuration
 
-Configuration is stored in `~/.sync/config.yaml`:
+Configuration is stored in `~/.config/sync/config.yaml`:
 
 ```yaml
 google_sheet_id: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
@@ -423,9 +423,9 @@ text_to_speech:
 #   request_delay_ms: 100
 ```
 
-Service account credentials: `~/.sync/service-account.json`
+Service account credentials: `~/.config/sync/service-account.json`
 
-State (timestamps) is stored in `~/.sync/state.json`:
+State (timestamps) is stored in `~/.config/sync/state.json`:
 
 ```json
 {
@@ -507,7 +507,7 @@ Run `./sync init` to create the configuration.
 2. Go to IAM & Admin → Service Accounts
 3. Create Service Account
 4. Download JSON key
-5. Move to `~/.sync/service-account.json`
+5. Move to `~/.config/sync/service-account.json`
 
 ### "Failed to read sheet" or "Permission denied"
 

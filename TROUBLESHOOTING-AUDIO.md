@@ -4,7 +4,7 @@
 
 ### Step 1: Verify TTS is enabled in config
 
-Check your `~/.sync/config.yaml` file:
+Check your `~/.config/sync/config.yaml` file:
 
 ```yaml
 anki_profile: "User 1"  # Your Anki profile name (must match exactly)
@@ -151,7 +151,7 @@ If older, update:
 ### Common Issues
 
 #### Issue: "TTS is disabled"
-**Solution:** Add the `text_to_speech` section to `~/.sync/config.yaml` with `enabled: true`
+**Solution:** Add the `text_to_speech` section to `~/.config/sync/config.yaml` with `enabled: true`
 
 #### Issue: "Failed to initialize TTS client"
 **Solution:**
@@ -187,7 +187,7 @@ This will show:
 
 If audio still doesn't appear:
 
-1. Check if `~/.sync/service-account.json` exists and is valid
+1. Check if `~/.config/sync/service-account.json` exists and is valid
 2. Try creating a card manually in Anki with a `[sound:test.mp3]` tag to verify Anki's audio works
 3. Check Anki's error console: Help → Debug Console → Check for errors
 4. Verify the card's note type is "VocabSync" (should be auto-created)
