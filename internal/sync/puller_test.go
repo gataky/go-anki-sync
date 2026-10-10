@@ -130,7 +130,7 @@ func TestPull_WithModifiedNotes(t *testing.T) {
 	require.NoError(t, err)
 
 	// Should have 9 updates (checksum + 8 content fields)
-	assert.Len(t, sheetsClient.BatchUpdates, 9)
+	assert.Len(t, sheetsClient.BatchUpdates, 11)
 
 	// Verify updates contain new values
 	foundGreekUpdate := false
@@ -316,8 +316,8 @@ func TestPull_MultipleModifiedNotes(t *testing.T) {
 	err := puller.Pull(false)
 	require.NoError(t, err)
 
-	// Should have 18 updates (2 cards × 9 fields each)
-	assert.Len(t, sheetsClient.BatchUpdates, 18)
+	// Should have 22 updates (2 cards × 11 fields each)
+	assert.Len(t, sheetsClient.BatchUpdates, 22)
 
 	// State should be updated
 	assert.NotNil(t, stateManager.SavedState)

@@ -10,6 +10,7 @@ import (
 // CalculateChecksum computes a SHA256 hash of the content fields of a VocabCard.
 // Only content fields are included in the checksum:
 // - English, Greek, PartOfSpeech, Attributes, Examples, Tag, SubTag1, SubTag2
+// - Voice, ActiveForm (appended only when set, keeping older checksums stable)
 // Excluded fields (not part of checksum):
 // - RowNumber: positional metadata
 // - AnkiID: external identifier
@@ -30,6 +31,9 @@ func CalculateChecksum(card *models.VocabCard) string {
 		card.SubTag1,
 		card.SubTag2,
 	)
+	if card.Voice != "" || card.ActiveForm != "" {
+		content += fmt.Sprintf("|%s|%s", card.Voice, card.ActiveForm)
+	}
 
 	// Compute SHA256 hash
 	hash := sha256.Sum256([]byte(content))

@@ -309,3 +309,21 @@ func TestChecksumConsistency(t *testing.T) {
 			"Checksum %d should match first checksum", i)
 	}
 }
+
+func TestCalculateChecksum_VoiceAndActiveForm(t *testing.T) {
+	base := &models.VocabCard{English: "to be written", Greek: "γράφομαι", PartOfSpeech: "Verb"}
+	baseChecksum := CalculateChecksum(base)
+
+	// Cards without voice/active form keep the same checksum format as before
+	assert.Equal(t, baseChecksum, CalculateChecksum(&models.VocabCard{
+		English: "to be written", Greek: "γράφομαι", PartOfSpeech: "Verb", Voice: "", ActiveForm: "",
+	}))
+
+	withVoice := *base
+	withVoice.Voice = "passive"
+	assert.NotEqual(t, baseChecksum, CalculateChecksum(&withVoice))
+
+	withActive := withVoice
+	withActive.ActiveForm = "γράφω"
+	assert.NotEqual(t, CalculateChecksum(&withVoice), CalculateChecksum(&withActive))
+}

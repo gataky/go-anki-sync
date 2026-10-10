@@ -291,6 +291,10 @@ Your spreadsheet should have these columns (order doesn't matter):
 | Sub-Tag 1 | No | Second-level tag |
 | Sub-Tag 2 | No | Third-level tag |
 | Regen TTS | No | Any value triggers audio regeneration |
+| Voice | No | Verb voice: `active`, `passive`, or `deponent` |
+| Active Form | No | Active form of a passive verb, if one exists |
+
+Voice and Active Form are shown in the Anki card's Grammar field, e.g. `Verb (Class B) · passive · Active: γράφω`.
 
 ### Audio Regeneration
 
@@ -329,10 +333,11 @@ The **Regen TTS** column allows you to force regeneration of text-to-speech audi
 
 ### Example
 
-| Anki ID | Checksum | English | Greek | Part of Speech | Attributes | Examples | Tag | Sub-Tag 1 | Sub-Tag 2 | Regen TTS |
-|---------|----------|---------|-------|----------------|------------|----------|-----|-----------|-----------|-----------|
-|  | | hello | γεια | Interjection | Informal | Hello, how are you?<br>Γεια σου! | Greetings | Basic | | |
-|  | | house | σπίτι | Noun | Neuter | This is my house.<br>Where is your house? | City | Buildings | Residential | |
+| Anki ID | Checksum | English | Greek | Part of Speech | Attributes | Examples | Tag | Sub-Tag 1 | Sub-Tag 2 | Regen TTS | Voice | Active Form |
+|---------|----------|---------|-------|----------------|------------|----------|-----|-----------|-----------|-----------|-------|-------------|
+|  | | hello | γεια | Interjection | Informal | Hello, how are you?<br>Γεια σου! | Greetings | Basic | | | | |
+|  | | house | σπίτι | Noun | Neuter | This is my house.<br>Where is your house? | City | Buildings | Residential | | | |
+|  | | to be written | γράφομαι | Verb | Class A | | | | | | passive | γράφω |
 
 ## Command Reference
 
@@ -436,7 +441,7 @@ State (timestamps) is stored in `~/.sync/state.json`:
 
 The tool uses SHA256 checksums of content fields to detect changes:
 
-- **Content fields**: English, Greek, Part of Speech, Attributes, Examples, Tag, Sub-Tag 1, Sub-Tag 2
+- **Content fields**: English, Greek, Part of Speech, Attributes, Examples, Tag, Sub-Tag 1, Sub-Tag 2, Voice, Active Form
 - **Excluded from checksum**: Anki ID, Checksum (itself), Row Number, Modified At
 
 ### Duplicate Detection

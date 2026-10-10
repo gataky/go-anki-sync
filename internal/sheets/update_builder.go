@@ -14,6 +14,8 @@ const (
 	ColTag          = "H"
 	ColSubTag1      = "I"
 	ColSubTag2      = "J"
+	ColVoice        = "L"
+	ColActiveForm   = "M"
 )
 
 // BuildCardUpdate creates complete cell updates for a vocab card.
@@ -22,7 +24,7 @@ const (
 func BuildCardUpdate(card *models.VocabCard, includeAnkiID bool) []CellUpdate {
 	row := card.RowNumber - 1 // CellUpdate uses 0-indexed rows
 
-	updates := make([]CellUpdate, 0, 10)
+	updates := make([]CellUpdate, 0, 12)
 	if includeAnkiID {
 		updates = append(updates, CellUpdate{Row: row, Column: ColAnkiID, Value: card.AnkiID})
 	}
@@ -37,6 +39,8 @@ func BuildCardUpdate(card *models.VocabCard, includeAnkiID bool) []CellUpdate {
 		CellUpdate{Row: row, Column: ColTag, Value: card.Tag},
 		CellUpdate{Row: row, Column: ColSubTag1, Value: card.SubTag1},
 		CellUpdate{Row: row, Column: ColSubTag2, Value: card.SubTag2},
+		CellUpdate{Row: row, Column: ColVoice, Value: card.Voice},
+		CellUpdate{Row: row, Column: ColActiveForm, Value: card.ActiveForm},
 	)
 }
 

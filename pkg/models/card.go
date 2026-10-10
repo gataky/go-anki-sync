@@ -38,6 +38,12 @@ type VocabCard struct {
 	// SubTag2 is the third-level category - Optional
 	SubTag2 string
 
+	// Voice is the verb voice (active, passive, deponent) - Optional
+	Voice string
+
+	// ActiveForm is the active form of a passive verb, if one exists - Optional
+	ActiveForm string
+
 	// RegenTTS indicates whether to force audio regeneration
 	// Any non-empty value triggers regeneration, automatically cleared after success
 	RegenTTS string

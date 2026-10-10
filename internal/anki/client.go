@@ -177,7 +177,7 @@ func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard,
 		"Front":        card.English,
 		"Back":         backField,
 		"PartOfSpeech": card.PartOfSpeech,
-		"Grammar":      buildGrammarField(card.PartOfSpeech, card.Attributes),
+		"Grammar":      buildCardGrammarField(card),
 		"Examples":     formatExamplesHTML(card.Examples),
 	}
 
@@ -287,7 +287,7 @@ func (c *AnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard, audi
 		"Front":        card.English,
 		"Back":         backField,
 		"PartOfSpeech": card.PartOfSpeech,
-		"Grammar":      buildGrammarField(card.PartOfSpeech, card.Attributes),
+		"Grammar":      buildCardGrammarField(card),
 		"Examples":     formatExamplesHTML(card.Examples),
 	}
 
@@ -473,6 +473,25 @@ func buildGrammarField(partOfSpeech, attributes string) string {
 	return fmt.Sprintf("%s (%s)", partOfSpeech, attributes)
 }
 
+// grammarSeparator separates the base grammar text from the voice and active form.
+const grammarSeparator = " · "
+
+// activeFormPrefix marks the active form segment of the Grammar field.
+const activeFormPrefix = "Active: "
+
+// buildCardGrammarField builds the full Grammar field for a card, appending voice and
+// active form to the base grammar text, e.g. "Verb (Class B) · passive · Active: γράφω".
+func buildCardGrammarField(card *models.VocabCard) string {
+	parts := []string{buildGrammarField(card.PartOfSpeech, card.Attributes)}
+	if card.Voice != "" {
+		parts = append(parts, card.Voice)
+	}
+	if card.ActiveForm != "" {
+		parts = append(parts, activeFormPrefix+card.ActiveForm)
+	}
+	return strings.Join(parts, grammarSeparator)
+}
+
 // formatExamplesHTML converts examples text to HTML format.
 // Takes newline-separated examples and returns a numbered HTML list.
 func formatExamplesHTML(examples string) string {
@@ -546,11 +565,24 @@ func buildTags(tag, subTag1, subTag2 string) []string {
 	return tags
 }
 
-// parseGrammarField splits grammar field back into part of speech and attributes.
+// parseGrammarField splits grammar field back into part of speech, attributes, voice and active form.
 func parseGrammarField(grammar string, card *models.VocabCard) {
-	// Simple parsing: look for format "PartOfSpeech (Attributes)"
+	// Simple parsing: look for format "PartOfSpeech (Attributes) · Voice · Active: ActiveForm"
 	if grammar == "" {
 		return
+	}
+
+	// Split off voice and active form segments, if any
+	segments := strings.Split(grammar, grammarSeparator)
+	grammar = segments[0]
+	card.Voice = ""
+	card.ActiveForm = ""
+	for _, seg := range segments[1:] {
+		if strings.HasPrefix(seg, activeFormPrefix) {
+			card.ActiveForm = strings.TrimPrefix(seg, activeFormPrefix)
+		} else {
+			card.Voice = seg
+		}
 	}
 
 	// Check if there are parentheses

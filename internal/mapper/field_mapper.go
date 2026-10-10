@@ -13,7 +13,7 @@ import (
 // rowNumber is 1-indexed (excluding the header row).
 //
 // Required fields: English, Greek, Part of Speech
-// Optional fields: Anki ID, Checksum, Attributes, Examples, Tag, Sub-Tag 1, Sub-Tag 2
+// Optional fields: Anki ID, Checksum, Attributes, Examples, Tag, Sub-Tag 1, Sub-Tag 2, Voice, Active Form
 func RowToCard(row []any, headers map[string]int, rowNumber int) (*models.VocabCard, error) {
 	card := &models.VocabCard{
 		RowNumber: rowNumber,
@@ -47,6 +47,8 @@ func RowToCard(row []any, headers map[string]int, rowNumber int) (*models.VocabC
 	card.SubTag1, _ = getString(row, headers, "sub-tag 1")
 	card.SubTag2, _ = getString(row, headers, "sub-tag 2")
 	card.RegenTTS, _ = getString(row, headers, "regen tts")
+	card.Voice, _ = getString(row, headers, "voice")
+	card.ActiveForm, _ = getString(row, headers, "active form")
 
 	return card, nil
 }
@@ -76,6 +78,8 @@ func CardToRow(card *models.VocabCard, headers map[string]int) []any {
 	setCell(row, headers, "sub-tag 1", card.SubTag1)
 	setCell(row, headers, "sub-tag 2", card.SubTag2)
 	setCell(row, headers, "regen tts", card.RegenTTS)
+	setCell(row, headers, "voice", card.Voice)
+	setCell(row, headers, "active form", card.ActiveForm)
 
 	return row
 }
@@ -193,6 +197,13 @@ func ValidateCard(card *models.VocabCard) error {
 	}
 	if card.SubTag1 != "" && card.Tag == "" {
 		return fmt.Errorf("Sub-Tag 1 cannot be set without Tag")
+	}
+
+	// Voice must be one of the known values (case-insensitive) if set
+	switch strings.ToLower(strings.TrimSpace(card.Voice)) {
+	case "", "active", "passive", "deponent":
+	default:
+		return fmt.Errorf("Voice must be one of: active, passive, deponent (got %q)", card.Voice)
 	}
 
 	return nil

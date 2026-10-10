@@ -365,3 +365,46 @@ func TestParseGrammarFieldEdgeCases(t *testing.T) {
 // - AddNote with non-nil audioData properly attaches audio to the note
 // - AddNote properly encodes audio data to base64
 // - AddNote sets correct filename and field ("Back") for audio attachment
+
+func TestCardGrammarFieldRoundTrip(t *testing.T) {
+	tests := []struct {
+		name     string
+		card     models.VocabCard
+		expected string
+	}{
+		{
+			name:     "no voice",
+			card:     models.VocabCard{PartOfSpeech: "Verb", Attributes: "Class A"},
+			expected: "Verb (Class A)",
+		},
+		{
+			name:     "voice only",
+			card:     models.VocabCard{PartOfSpeech: "Verb", Voice: "deponent"},
+			expected: "Verb · deponent",
+		},
+		{
+			name:     "voice and active form",
+			card:     models.VocabCard{PartOfSpeech: "Verb", Attributes: "Class B", Voice: "passive", ActiveForm: "γράφω"},
+			expected: "Verb (Class B) · passive · Active: γράφω",
+		},
+		{
+			name:     "active form without voice",
+			card:     models.VocabCard{PartOfSpeech: "Verb", ActiveForm: "γράφω"},
+			expected: "Verb · Active: γράφω",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			grammar := buildCardGrammarField(&tt.card)
+			assert.Equal(t, tt.expected, grammar)
+
+			card := &models.VocabCard{}
+			parseGrammarField(grammar, card)
+			assert.Equal(t, tt.card.PartOfSpeech, card.PartOfSpeech)
+			assert.Equal(t, tt.card.Attributes, card.Attributes)
+			assert.Equal(t, tt.card.Voice, card.Voice)
+			assert.Equal(t, tt.card.ActiveForm, card.ActiveForm)
+		})
+	}
+}

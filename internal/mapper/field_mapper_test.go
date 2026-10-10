@@ -522,3 +522,31 @@ func TestValidateCard_Invalid(t *testing.T) {
 		})
 	}
 }
+
+func TestRowToCard_VoiceAndActiveForm(t *testing.T) {
+	headers := map[string]int{
+		"english":        0,
+		"greek":          1,
+		"part of speech": 2,
+		"voice":          3,
+		"active form":    4,
+	}
+	row := []any{"to be written", "γράφομαι", "Verb", "passive", "γράφω"}
+
+	card, err := RowToCard(row, headers, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, "passive", card.Voice)
+	assert.Equal(t, "γράφω", card.ActiveForm)
+
+	assert.Equal(t, row, CardToRow(card, headers))
+}
+
+func TestValidateCard_Voice(t *testing.T) {
+	for _, voice := range []string{"", "active", "passive", "deponent", "Passive"} {
+		card := &models.VocabCard{English: "x", Greek: "χ", PartOfSpeech: "Verb", Voice: voice}
+		assert.NoError(t, ValidateCard(card), "voice %q should be valid", voice)
+	}
+
+	card := &models.VocabCard{English: "x", Greek: "χ", PartOfSpeech: "Verb", Voice: "middle"}
+	assert.ErrorContains(t, ValidateCard(card), "Voice must be one of")
+}

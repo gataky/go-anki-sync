@@ -28,9 +28,11 @@ func TestBuildCardUpdate(t *testing.T) {
 				Tag:            "greetings",
 				SubTag1:        "informal",
 				SubTag2:        "basic",
+				Voice:          "passive",
+				ActiveForm:     "χαιρετώ",
 			},
 			includeAnkiID: true,
-			wantLen:       10,
+			wantLen:       12,
 			wantAnkiID:    true,
 		},
 		{
@@ -49,7 +51,7 @@ func TestBuildCardUpdate(t *testing.T) {
 				SubTag2:        "",
 			},
 			includeAnkiID: false,
-			wantLen:       9,
+			wantLen:       11,
 			wantAnkiID:    false,
 		},
 	}
@@ -95,6 +97,8 @@ func TestBuildCardUpdate(t *testing.T) {
 				ColTag:          tt.card.Tag,
 				ColSubTag1:      tt.card.SubTag1,
 				ColSubTag2:      tt.card.SubTag2,
+				ColVoice:        tt.card.Voice,
+				ColActiveForm:   tt.card.ActiveForm,
 			}
 
 			for _, update := range updates {
