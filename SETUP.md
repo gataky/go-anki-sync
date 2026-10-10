@@ -39,8 +39,8 @@ This tool uses **service accounts** for Google Sheets access - much simpler than
 
 ```bash
 # Move the service account key to the right location
-mkdir -p ~/.sync
-mv ~/Downloads/service-account.json ~/.sync/
+mkdir -p ~/.config/sync
+mv ~/Downloads/service-account.json ~/.config/sync/
 
 # Initialize configuration
 ./sync init
@@ -69,14 +69,14 @@ When prompted, enter:
 
 ### "Failed to read service account key file"
 
-The file needs to be at `~/.sync/service-account.json`
+The file needs to be at `~/.config/sync/service-account.json`
 
 ```bash
 # Check if it exists
-ls ~/.sync/service-account.json
+ls ~/.config/sync/service-account.json
 
 # If not, move it there
-mv /path/to/your/downloaded-key.json ~/.sync/service-account.json
+mv /path/to/your/downloaded-key.json ~/.config/sync/service-account.json
 ```
 
 ### "Permission denied" or "Failed to read sheet"
