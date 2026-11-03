@@ -17,10 +17,10 @@ var (
 // rootCmd represents the base command
 var rootCmd = &cobra.Command{
 	Use:   "sync",
-	Short: "Sync vocabulary cards between Google Sheets and Anki",
-	Long: `A bidirectional sync tool for managing vocabulary flashcards.
-Syncs vocabulary data between Google Sheets and Anki with checksum-based
-change detection and timestamp-based conflict resolution.`,
+	Short: "Sync vocabulary cards from Google Sheets to Anki",
+	Long: `A sync tool for managing vocabulary flashcards.
+Pushes vocabulary data from Google Sheets to Anki with checksum-based
+change detection.`,
 }
 
 // Execute runs the root command

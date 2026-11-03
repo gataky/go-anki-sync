@@ -550,3 +550,39 @@ func TestValidateCard_Voice(t *testing.T) {
 	card := &models.VocabCard{English: "x", Greek: "χ", PartOfSpeech: "Verb", Voice: "middle"}
 	assert.ErrorContains(t, ValidateCard(card), "Voice must be one of")
 }
+
+func TestRowToCard_SubTagHeaderSpellings(t *testing.T) {
+	for _, headers := range []map[string]int{
+		{"english": 0, "greek": 1, "part of speech": 2, "sub tag 1": 3, "sub tag 2": 4},
+		{"english": 0, "greek": 1, "part of speech": 2, "sub-tag 1": 3, "sub-tag 2": 4},
+	} {
+		row := []any{"afternoon", "απόγευμα", "noun", "day", "evening"}
+
+		card, err := RowToCard(row, headers, 2)
+		require.NoError(t, err)
+		assert.Equal(t, "day", card.SubTag1)
+		assert.Equal(t, "evening", card.SubTag2)
+
+		assert.Equal(t, row, CardToRow(card, headers))
+	}
+}
+
+func TestRowToCard_NotesAndPrincipalParts(t *testing.T) {
+	headers := map[string]int{
+		"english":        0,
+		"greek":          1,
+		"part of speech": 2,
+		"notes":          3,
+		"future simple":  4,
+		"aorist":         5,
+	}
+	row := []any{"I write", "γράφω", "verb", "Regular a1 verb", "γράψω", "έγραψα"}
+
+	card, err := RowToCard(row, headers, 2)
+	require.NoError(t, err)
+	assert.Equal(t, "Regular a1 verb", card.Notes)
+	assert.Equal(t, "γράψω", card.FutureSimple)
+	assert.Equal(t, "έγραψα", card.Aorist)
+
+	assert.Equal(t, row, CardToRow(card, headers))
+}

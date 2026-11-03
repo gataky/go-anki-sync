@@ -1,52 +1,12 @@
 package anki
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/gataky/sync/pkg/models"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestBuildGrammarField(t *testing.T) {
-	tests := []struct {
-		name         string
-		partOfSpeech string
-		attributes   string
-		expected     string
-	}{
-		{
-			name:         "with attributes",
-			partOfSpeech: "Noun",
-			attributes:   "Masculine",
-			expected:     "Noun (Masculine)",
-		},
-		{
-			name:         "without attributes",
-			partOfSpeech: "Verb",
-			attributes:   "",
-			expected:     "Verb",
-		},
-		{
-			name:         "with complex attributes",
-			partOfSpeech: "Verb",
-			attributes:   "Class 1, Present",
-			expected:     "Verb (Class 1, Present)",
-		},
-		{
-			name:         "adjective without attributes",
-			partOfSpeech: "Adjective",
-			attributes:   "",
-			expected:     "Adjective",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := buildGrammarField(tt.partOfSpeech, tt.attributes)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
 
 func TestBuildTags(t *testing.T) {
 	tests := []struct {
@@ -101,98 +61,6 @@ func TestBuildTags(t *testing.T) {
 	}
 }
 
-func TestParseGrammarField(t *testing.T) {
-	tests := []struct {
-		name         string
-		grammar      string
-		expectedPOS  string
-		expectedAttr string
-	}{
-		{
-			name:         "with attributes",
-			grammar:      "Noun (Masculine)",
-			expectedPOS:  "Noun",
-			expectedAttr: "Masculine",
-		},
-		{
-			name:         "without attributes",
-			grammar:      "Verb",
-			expectedPOS:  "Verb",
-			expectedAttr: "",
-		},
-		{
-			name:         "with complex attributes",
-			grammar:      "Verb (Class 1, Present)",
-			expectedPOS:  "Verb",
-			expectedAttr: "Class 1, Present",
-		},
-		{
-			name:         "empty grammar",
-			grammar:      "",
-			expectedPOS:  "",
-			expectedAttr: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			card := &models.VocabCard{}
-			parseGrammarField(tt.grammar, card)
-			assert.Equal(t, tt.expectedPOS, card.PartOfSpeech)
-			assert.Equal(t, tt.expectedAttr, card.Attributes)
-		})
-	}
-}
-
-func TestParseTags(t *testing.T) {
-	tests := []struct {
-		name            string
-		tags            []string
-		expectedTag     string
-		expectedSubTag1 string
-		expectedSubTag2 string
-	}{
-		{
-			name:            "single level",
-			tags:            []string{"City"},
-			expectedTag:     "City",
-			expectedSubTag1: "",
-			expectedSubTag2: "",
-		},
-		{
-			name:            "two levels",
-			tags:            []string{"City::Buildings"},
-			expectedTag:     "City",
-			expectedSubTag1: "Buildings",
-			expectedSubTag2: "",
-		},
-		{
-			name:            "three levels",
-			tags:            []string{"City::Buildings::Museums"},
-			expectedTag:     "City",
-			expectedSubTag1: "Buildings",
-			expectedSubTag2: "Museums",
-		},
-		{
-			name:            "no tags",
-			tags:            []string{},
-			expectedTag:     "",
-			expectedSubTag1: "",
-			expectedSubTag2: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			card := &models.VocabCard{}
-			parseTags(tt.tags, card)
-			assert.Equal(t, tt.expectedTag, card.Tag)
-			assert.Equal(t, tt.expectedSubTag1, card.SubTag1)
-			assert.Equal(t, tt.expectedSubTag2, card.SubTag2)
-		})
-	}
-}
-
 func TestFormatExamplesHTML(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -205,29 +73,25 @@ func TestFormatExamplesHTML(t *testing.T) {
 			expected: "",
 		},
 		{
-			name:     "single example",
-			examples: "Example 1",
-			expected: "Example 1",
-		},
-		{
-			name:     "multiple examples with newlines",
-			examples: "this is an example\nand this is another",
-			expected: "<ol style='text-align: left; margin: 10px auto; display: inline-block;'><li>this is an example</li><li>and this is another</li></ol>",
-		},
-		{
-			name:     "multiple examples with empty lines",
-			examples: "First example\n\nSecond example\n\n",
-			expected: "<ol style='text-align: left; margin: 10px auto; display: inline-block;'><li>First example</li><li>Second example</li></ol>",
-		},
-		{
 			name:     "whitespace only",
 			examples: "   \n\t\n   ",
 			expected: "",
 		},
 		{
-			name:     "three examples",
-			examples: "Example one\nExample two\nExample three",
-			expected: "<ol style='text-align: left; margin: 10px auto; display: inline-block;'><li>Example one</li><li>Example two</li><li>Example three</li></ol>",
+			name:     "greek with translation",
+			examples: "Θέλω λίγο νερό. — I want a little water.",
+			expected: `<div class="ex"><span class="ex-el">Θέλω λίγο νερό.</span><span class="ex-en">I want a little water.</span></div>`,
+		},
+		{
+			name:     "greek without translation",
+			examples: "Αύριο εξετάζομαι στα μαθηματικά.",
+			expected: `<div class="ex"><span class="ex-el">Αύριο εξετάζομαι στα μαθηματικά.</span></div>`,
+		},
+		{
+			name:     "multiple examples with empty lines",
+			examples: "Πού είναι; — Where is it?\n\nΕδώ είναι. — It is here.\n",
+			expected: `<div class="ex"><span class="ex-el">Πού είναι;</span><span class="ex-en">Where is it?</span></div>` +
+				`<div class="ex"><span class="ex-el">Εδώ είναι.</span><span class="ex-en">It is here.</span></div>`,
 		},
 	}
 
@@ -239,61 +103,51 @@ func TestFormatExamplesHTML(t *testing.T) {
 	}
 }
 
-func TestRoundTripGrammarField(t *testing.T) {
-	tests := []struct {
-		name         string
-		partOfSpeech string
-		attributes   string
-	}{
-		{"noun with gender", "Noun", "Masculine"},
-		{"verb with class", "Verb", "Class 1"},
-		{"adjective no attributes", "Adjective", ""},
-		{"complex attributes", "Verb", "Class 2, Imperfect"},
+func TestFormatNotesHTML(t *testing.T) {
+	assert.Equal(t, "", formatNotesHTML(""))
+	assert.Equal(t, "One note", formatNotesHTML("  One note  "))
+	assert.Equal(t, "First<br>Second", formatNotesHTML("First\n\nSecond\n"))
+}
+
+func TestBuildNoteFields(t *testing.T) {
+	card := &models.VocabCard{
+		English:      "age",
+		Greek:        "ηλικία",
+		PartOfSpeech: "noun",
+		Attributes:   "feminine",
+		Examples:     "Ποια είναι η ηλικία σου; — What is your age?",
+		Notes:        "Natives usually say Πόσων χρονών είσαι;",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Build grammar field
-			grammar := buildGrammarField(tt.partOfSpeech, tt.attributes)
+	fields := buildNoteFields(card, "ηλικία [sound:ηλικία-etts-1.mp3]")
 
-			// Parse it back
-			card := &models.VocabCard{}
-			parseGrammarField(grammar, card)
+	assert.Equal(t, "age", fields["Front"])
+	assert.Equal(t, "ηλικία [sound:ηλικία-etts-1.mp3]", fields["Back"])
+	assert.Equal(t, "η", fields["Article"])
+	assert.Equal(t, "feminine", fields["Gender"])
+	assert.Equal(t, "feminine", fields["Attributes"])
+	assert.Equal(t, formatExamplesHTML(card.Examples), fields["Examples"])
+	assert.Equal(t, "Natives usually say Πόσων χρονών είσαι;", fields["Notes"])
 
-			// Verify round-trip
-			assert.Equal(t, tt.partOfSpeech, card.PartOfSpeech)
-			assert.Equal(t, tt.attributes, card.Attributes)
-		})
+	// Every field written to a note must exist on the note type
+	for name := range fields {
+		assert.Contains(t, noteTypeFields, name)
 	}
 }
 
-func TestRoundTripTags(t *testing.T) {
-	tests := []struct {
-		name    string
-		tag     string
-		subTag1 string
-		subTag2 string
-	}{
-		{"single level", "City", "", ""},
-		{"two levels", "City", "Buildings", ""},
-		{"three levels", "City", "Buildings", "Museums"},
-		{"food category", "Food", "Vegetables", "Leafy"},
+func TestNoteTypeTemplatesUseKnownFields(t *testing.T) {
+	fieldRef := regexp.MustCompile(`\{\{[#/^]?([A-Za-z]+)\}\}`)
+	known := map[string]bool{"FrontSide": true}
+	for _, f := range noteTypeFields {
+		known[f] = true
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Build tags
-			tags := buildTags(tt.tag, tt.subTag1, tt.subTag2)
-
-			// Parse them back
-			card := &models.VocabCard{}
-			parseTags(tags, card)
-
-			// Verify round-trip
-			assert.Equal(t, tt.tag, card.Tag)
-			assert.Equal(t, tt.subTag1, card.SubTag1)
-			assert.Equal(t, tt.subTag2, card.SubTag2)
-		})
+	for _, tmpl := range noteTypeTemplates {
+		for _, side := range []string{tmpl.Front, tmpl.Back} {
+			for _, m := range fieldRef.FindAllStringSubmatch(side, -1) {
+				assert.True(t, known[m[1]], "template %q references unknown field %q", tmpl.Name, m[1])
+			}
+		}
 	}
 }
 
@@ -302,7 +156,7 @@ func TestVocabSyncModelName(t *testing.T) {
 }
 
 // Note: Tests for AnkiClient methods that interact with the actual AnkiConnect API
-// (NewAnkiClient, CheckConnection, CreateDeck, CreateNoteType, AddNote, UpdateNoteFields,
+// (NewAnkiClient, CheckConnection, CreateDeck, EnsureNoteType, AddNote, UpdateNoteFields,
 // DeleteNote, FindModifiedNotes, GetNotesInfo) would require either:
 // 1. A running Anki instance with AnkiConnect installed (integration tests)
 // 2. Mocking the ankiconnect.Client (unit tests with gomock)
@@ -318,44 +172,6 @@ func TestBuildTagsEdgeCases(t *testing.T) {
 	assert.Equal(t, []string{"City"}, tags, "SubTag2 should be ignored if SubTag1 is empty")
 }
 
-func TestParseGrammarFieldEdgeCases(t *testing.T) {
-	// Test malformed grammar strings
-	tests := []struct {
-		name         string
-		grammar      string
-		expectedPOS  string
-		expectedAttr string
-	}{
-		{
-			name:         "only opening paren",
-			grammar:      "Noun (Masculine",
-			expectedPOS:  "Noun (Masculine",
-			expectedAttr: "",
-		},
-		{
-			name:         "only closing paren",
-			grammar:      "Noun Masculine)",
-			expectedPOS:  "Noun Masculine)",
-			expectedAttr: "",
-		},
-		{
-			name:         "empty parentheses",
-			grammar:      "Noun ()",
-			expectedPOS:  "Noun",
-			expectedAttr: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			card := &models.VocabCard{}
-			parseGrammarField(tt.grammar, card)
-			assert.Equal(t, tt.expectedPOS, card.PartOfSpeech)
-			assert.Equal(t, tt.expectedAttr, card.Attributes)
-		})
-	}
-}
-
 // Note: Tests for audio-related methods (CheckAudioExists, StoreAudioFile, AddNote with audio)
 // would require integration testing with a running Anki instance.
 //
@@ -365,46 +181,3 @@ func TestParseGrammarFieldEdgeCases(t *testing.T) {
 // - AddNote with non-nil audioData properly attaches audio to the note
 // - AddNote properly encodes audio data to base64
 // - AddNote sets correct filename and field ("Back") for audio attachment
-
-func TestCardGrammarFieldRoundTrip(t *testing.T) {
-	tests := []struct {
-		name     string
-		card     models.VocabCard
-		expected string
-	}{
-		{
-			name:     "no voice",
-			card:     models.VocabCard{PartOfSpeech: "Verb", Attributes: "Class A"},
-			expected: "Verb (Class A)",
-		},
-		{
-			name:     "voice only",
-			card:     models.VocabCard{PartOfSpeech: "Verb", Voice: "deponent"},
-			expected: "Verb · deponent",
-		},
-		{
-			name:     "voice and active form",
-			card:     models.VocabCard{PartOfSpeech: "Verb", Attributes: "Class B", Voice: "passive", ActiveForm: "γράφω"},
-			expected: "Verb (Class B) · passive · Active: γράφω",
-		},
-		{
-			name:     "active form without voice",
-			card:     models.VocabCard{PartOfSpeech: "Verb", ActiveForm: "γράφω"},
-			expected: "Verb · Active: γράφω",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			grammar := buildCardGrammarField(&tt.card)
-			assert.Equal(t, tt.expected, grammar)
-
-			card := &models.VocabCard{}
-			parseGrammarField(grammar, card)
-			assert.Equal(t, tt.card.PartOfSpeech, card.PartOfSpeech)
-			assert.Equal(t, tt.card.Attributes, card.Attributes)
-			assert.Equal(t, tt.card.Voice, card.Voice)
-			assert.Equal(t, tt.card.ActiveForm, card.ActiveForm)
-		})
-	}
-}

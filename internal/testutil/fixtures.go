@@ -128,8 +128,3 @@ func BuildSheetRows(cards []*models.VocabCard) [][]any {
 
 	return rows
 }
-
-// NewTestState creates a test sync state.
-func NewTestState() *models.SyncState {
-	return &models.SyncState{}
-}

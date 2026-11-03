@@ -3,7 +3,6 @@ package models
 import (
 	"fmt"
 	"strings"
-	"time"
 )
 
 // Default configuration values
@@ -145,17 +144,4 @@ func (c *Config) SetDefaults() {
 	if c.AnkiProfile == "" {
 		c.AnkiProfile = "User 1"
 	}
-}
-
-// SyncState represents the persistent state of synchronization operations.
-// Stored in ~/.sync/state.json to track when syncs last occurred.
-type SyncState struct {
-	// LastPullTimestamp is when the last successful pull from Anki to Sheets occurred
-	LastPullTimestamp time.Time `json:"last_pull_timestamp"`
-
-	// LastPushTimestamp is when the last successful push from Sheets to Anki occurred
-	LastPushTimestamp time.Time `json:"last_push_timestamp"`
-
-	// ConfigHash is a SHA256 hash of the config to detect configuration changes
-	ConfigHash string `json:"config_hash"`
 }

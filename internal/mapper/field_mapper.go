@@ -13,7 +13,8 @@ import (
 // rowNumber is 1-indexed (excluding the header row).
 //
 // Required fields: English, Greek, Part of Speech
-// Optional fields: Anki ID, Checksum, Attributes, Examples, Tag, Sub-Tag 1, Sub-Tag 2, Voice, Active Form
+// Optional fields: Anki ID, Checksum, Attributes, Examples, Notes, Tag, Sub Tag 1, Sub Tag 2, Voice,
+// Active Form, Future Simple, Aorist
 func RowToCard(row []any, headers map[string]int, rowNumber int) (*models.VocabCard, error) {
 	card := &models.VocabCard{
 		RowNumber: rowNumber,
@@ -43,12 +44,15 @@ func RowToCard(row []any, headers map[string]int, rowNumber int) (*models.VocabC
 	card.StoredChecksum, _ = getString(row, headers, "checksum")
 	card.Attributes, _ = getString(row, headers, "attributes")
 	card.Examples, _ = getString(row, headers, "examples")
+	card.Notes, _ = getString(row, headers, "notes")
 	card.Tag, _ = getString(row, headers, "tag")
-	card.SubTag1, _ = getString(row, headers, "sub-tag 1")
-	card.SubTag2, _ = getString(row, headers, "sub-tag 2")
+	card.SubTag1, _ = getString(row, headers, "sub tag 1")
+	card.SubTag2, _ = getString(row, headers, "sub tag 2")
 	card.RegenTTS, _ = getString(row, headers, "regen tts")
 	card.Voice, _ = getString(row, headers, "voice")
 	card.ActiveForm, _ = getString(row, headers, "active form")
+	card.FutureSimple, _ = getString(row, headers, "future simple")
+	card.Aorist, _ = getString(row, headers, "aorist")
 
 	return card, nil
 }
@@ -74,20 +78,42 @@ func CardToRow(card *models.VocabCard, headers map[string]int) []any {
 	setCell(row, headers, "part of speech", card.PartOfSpeech)
 	setCell(row, headers, "attributes", card.Attributes)
 	setCell(row, headers, "examples", card.Examples)
+	setCell(row, headers, "notes", card.Notes)
 	setCell(row, headers, "tag", card.Tag)
-	setCell(row, headers, "sub-tag 1", card.SubTag1)
-	setCell(row, headers, "sub-tag 2", card.SubTag2)
+	setCell(row, headers, "sub tag 1", card.SubTag1)
+	setCell(row, headers, "sub tag 2", card.SubTag2)
 	setCell(row, headers, "regen tts", card.RegenTTS)
 	setCell(row, headers, "voice", card.Voice)
 	setCell(row, headers, "active form", card.ActiveForm)
+	setCell(row, headers, "future simple", card.FutureSimple)
+	setCell(row, headers, "aorist", card.Aorist)
 
 	return row
+}
+
+// columnAliases lists alternative header spellings accepted for a column.
+var columnAliases = map[string][]string{
+	"sub tag 1": {"sub-tag 1"},
+	"sub tag 2": {"sub-tag 2"},
+}
+
+// lookupColumn returns the index of the named column, falling back to its known alternative spellings.
+func lookupColumn(headers map[string]int, columnName string) (int, bool) {
+	if idx, exists := headers[columnName]; exists {
+		return idx, true
+	}
+	for _, alias := range columnAliases[columnName] {
+		if idx, exists := headers[alias]; exists {
+			return idx, true
+		}
+	}
+	return 0, false
 }
 
 // getString extracts a string value from a row at the column specified by the header name.
 // Returns empty string if column doesn't exist or cell is empty/nil.
 func getString(row []any, headers map[string]int, columnName string) (string, error) {
-	idx, exists := headers[columnName]
+	idx, exists := lookupColumn(headers, columnName)
 	if !exists {
 		return "", nil // Column doesn't exist, return empty string
 	}
@@ -108,7 +134,7 @@ func getString(row []any, headers map[string]int, columnName string) (string, er
 // getInt64 extracts an int64 value from a row at the column specified by the header name.
 // Returns 0 if column doesn't exist, cell is empty/nil, or value cannot be parsed.
 func getInt64(row []any, headers map[string]int, columnName string) (int64, error) {
-	idx, exists := headers[columnName]
+	idx, exists := lookupColumn(headers, columnName)
 	if !exists {
 		return 0, nil // Column doesn't exist
 	}
@@ -149,7 +175,7 @@ func getInt64(row []any, headers map[string]int, columnName string) (int64, erro
 // setCell sets a value in a row at the column specified by the header name.
 // Does nothing if the column doesn't exist.
 func setCell(row []any, headers map[string]int, columnName string, value any) {
-	idx, exists := headers[columnName]
+	idx, exists := lookupColumn(headers, columnName)
 	if !exists {
 		return // Column doesn't exist, skip
 	}

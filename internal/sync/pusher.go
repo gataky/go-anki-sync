@@ -24,6 +24,7 @@ type Pusher struct {
 	config       *models.Config
 	logger       *logging.SyncLogger
 	ttsClient    TTSClientInterface
+	forceUpdate  bool
 }
 
 // NewPusher creates a new Pusher instance.
@@ -41,6 +42,12 @@ func NewPusher(
 		logger:       logger,
 		ttsClient:    ttsClient,
 	}
+}
+
+// SetForceUpdate makes Push update every existing card, even those whose checksum is unchanged.
+// Useful after the note type gains fields that existing notes should be filled in for.
+func (p *Pusher) SetForceUpdate(force bool) {
+	p.forceUpdate = force
 }
 
 // Push executes the push sync from Google Sheets to Anki.
@@ -134,9 +141,9 @@ func (p *Pusher) Push(dryRun bool) error {
 		p.logger.Info("Ensured deck '%s' exists", p.config.AnkiDeck)
 	}
 
-	// Ensure VocabSync note type exists
+	// Ensure VocabSync note type exists and is up to date
 	if !dryRun {
-		if err := p.ankiClient.CreateNoteType(anki.VocabSyncModelName); err != nil {
+		if err := p.ankiClient.EnsureNoteType(anki.VocabSyncModelName); err != nil {
 			return fmt.Errorf("failed to create note type: %w", err)
 		}
 		p.logger.Info("Ensured note type '%s' exists", anki.VocabSyncModelName)
@@ -351,8 +358,9 @@ func (p *Pusher) findExistingAudio(greekWord string, source string) string {
 // Supports versioned filenames and regeneration via card.RegenTTS flag.
 // All errors are logged but do not block card creation.
 func (p *Pusher) generateAudioForCard(card *models.VocabCard) ([]byte, string) {
-	// Validate Greek text
+	// Validate Greek text. Audio files are named after the Greek word, but nouns are spoken with their article.
 	greekText := strings.TrimSpace(card.Greek)
+	spokenText := mapper.SpokenGreek(card)
 	if greekText == "" {
 		p.logger.Warn("Skipping audio generation for card '%s' (row %d): Greek text is empty", card.English, card.RowNumber)
 		return nil, ""
@@ -371,7 +379,7 @@ func (p *Pusher) generateAudioForCard(card *models.VocabCard) ([]byte, string) {
 		version := p.getNextAudioVersion(greekText, source)
 		filename := p.buildAudioFilename(greekText, source, version)
 
-		audioData, err := p.ttsClient.GenerateAudio(greekText)
+		audioData, err := p.ttsClient.GenerateAudio(spokenText)
 		if err != nil {
 			p.logger.Error("Failed to regenerate audio for '%s': %v", greekText, err)
 			return nil, ""
@@ -392,7 +400,7 @@ func (p *Pusher) generateAudioForCard(card *models.VocabCard) ([]byte, string) {
 	version := p.getNextAudioVersion(greekText, source)
 	filename := p.buildAudioFilename(greekText, source, version)
 
-	audioData, err := p.ttsClient.GenerateAudio(greekText)
+	audioData, err := p.ttsClient.GenerateAudio(spokenText)
 	if err != nil {
 		p.logger.Error("Failed to generate audio for '%s': %v", greekText, err)
 		return nil, ""
@@ -519,7 +527,7 @@ func (p *Pusher) updateExistingCards(cards []*models.VocabCard, headers map[stri
 		hasChanged := mapper.HasChanged(card)
 		needsRegeneration := ttsEnabled && strings.TrimSpace(card.RegenTTS) != ""
 
-		if !hasChanged && !needsRegeneration {
+		if !hasChanged && !needsRegeneration && !p.forceUpdate {
 			p.logger.AddStat("unchanged", 1)
 			continue // Card unchanged and no regeneration requested, skip
 		}

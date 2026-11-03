@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/gataky/sync/internal/sheets"
 	"github.com/gataky/sync/pkg/models"
@@ -54,7 +53,7 @@ type MockAnkiClient struct {
 	FailCards       map[string]bool // Cards that should fail to create (keyed by English)
 	FailUpdates     map[int64]bool  // Note IDs that should fail to update
 	DeckExists      bool            // If true, CreateDeck returns success without doing anything
-	ModelExists     bool            // If true, CreateNoteType returns success without doing anything
+	ModelExists     bool            // If true, EnsureNoteType returns success without doing anything
 	AudioExists     map[string]bool // Audio files that exist (keyed by filename)
 }
 
@@ -72,7 +71,7 @@ func (m *MockAnkiClient) CreateDeck(deckName string) error {
 	return nil
 }
 
-func (m *MockAnkiClient) CreateNoteType(modelName string) error {
+func (m *MockAnkiClient) EnsureNoteType(modelName string) error {
 	m.NoteTypeCreated = modelName
 	return nil
 }
@@ -108,53 +107,6 @@ func (m *MockAnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard, 
 
 	m.UpdatedNotes[noteID] = card
 	return nil
-}
-
-// MockPullerAnkiClient is a mock implementation of PullerAnkiClient for testing.
-// It extends MockAnkiClient with pull-specific methods.
-type MockPullerAnkiClient struct {
-	*MockAnkiClient
-	ModifiedNoteIDs []int64
-	NotesInfo       []*models.VocabCard
-}
-
-// NewMockPullerAnkiClient creates a new MockPullerAnkiClient.
-func NewMockPullerAnkiClient() *MockPullerAnkiClient {
-	return &MockPullerAnkiClient{
-		MockAnkiClient:  NewMockAnkiClient(),
-		ModifiedNoteIDs: []int64{},
-		NotesInfo:       []*models.VocabCard{},
-	}
-}
-
-func (m *MockPullerAnkiClient) FindModifiedNotes(deckName string, sinceTimestamp time.Time) ([]int64, error) {
-	return m.ModifiedNoteIDs, nil
-}
-
-func (m *MockPullerAnkiClient) GetNotesInfo(noteIDs []int64) ([]*models.VocabCard, error) {
-	return m.NotesInfo, nil
-}
-
-// MockStateManager is a mock implementation of StateManager for testing.
-type MockStateManager struct {
-	SavedState *models.SyncState
-	StatePath  string
-}
-
-func (m *MockStateManager) LoadState(path string) (*models.SyncState, error) {
-	return &models.SyncState{}, nil
-}
-
-func (m *MockStateManager) SaveState(state *models.SyncState, path string) error {
-	m.SavedState = state
-	return nil
-}
-
-func (m *MockStateManager) GetDefaultStatePath() string {
-	if m.StatePath == "" {
-		return "/tmp/state.json"
-	}
-	return m.StatePath
 }
 
 // MockTTSClient is a mock implementation of TTSClient for testing.

@@ -9,7 +9,6 @@ import (
 	"github.com/gataky/sync/internal/config"
 	"github.com/gataky/sync/internal/logging"
 	"github.com/gataky/sync/internal/sheets"
-	"github.com/gataky/sync/internal/state"
 	"github.com/gataky/sync/internal/sync"
 	"github.com/gataky/sync/internal/tts"
 	"github.com/gataky/sync/pkg/models"
@@ -21,14 +20,11 @@ type AppContext struct {
 	SheetsClient *sheets.SheetsClient
 	AnkiClient   *anki.AnkiClient
 	TTSClient    sync.TTSClientInterface
-	State        *models.SyncState
-	StateManager *state.Manager
 	Logger       *logging.SyncLogger
 }
 
 // BootstrapOptions configures which dependencies to initialize.
 type BootstrapOptions struct {
-	LoadState bool // Load sync state (for pull/both)
 	EnableTTS bool // Initialize TTS client (for push)
 }
 
@@ -69,20 +65,6 @@ func Bootstrap(opts BootstrapOptions) (*AppContext, error) {
 		SheetsClient: sheetsClient,
 		AnkiClient:   ankiClient,
 		Logger:       logger,
-	}
-
-	// Conditionally load state
-	if opts.LoadState {
-		statePath, err := state.GetDefaultStatePath()
-		if err != nil {
-			return nil, printError("failed to get state path: %w", err)
-		}
-		syncState, err := state.LoadState(statePath)
-		if err != nil {
-			return nil, printError("failed to load state: %w", err)
-		}
-		ctx.State = syncState
-		ctx.StateManager = &state.Manager{}
 	}
 
 	// Conditionally initialize TTS

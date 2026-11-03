@@ -1,4 +1,4 @@
-.PHONY: build test clean install run-init run-push run-pull run-both help
+.PHONY: build test clean install run-init run-push help
 
 # Build variables
 BINARY_NAME=sync
@@ -71,22 +71,6 @@ run-push:
 run-push-dry:
 	@./$(BINARY_NAME) push --dry-run
 
-# Run pull command
-run-pull:
-	@./$(BINARY_NAME) pull
-
-# Run pull with dry-run
-run-pull-dry:
-	@./$(BINARY_NAME) pull --dry-run
-
-# Run both command
-run-both:
-	@./$(BINARY_NAME) both
-
-# Run both with dry-run
-run-both-dry:
-	@./$(BINARY_NAME) both --dry-run
-
 # Format code
 fmt:
 	@echo "Formatting code..."
@@ -112,10 +96,6 @@ help:
 	@echo "  run-init       - Run init command"
 	@echo "  run-push       - Run push command"
 	@echo "  run-push-dry   - Run push with --dry-run"
-	@echo "  run-pull       - Run pull command"
-	@echo "  run-pull-dry   - Run pull with --dry-run"
-	@echo "  run-both       - Run both command"
-	@echo "  run-both-dry   - Run both with --dry-run"
 	@echo "  fmt            - Format code"
 	@echo "  lint           - Lint code (requires golangci-lint)"
 	@echo "  help           - Show this help message"

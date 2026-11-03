@@ -4,9 +4,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/atselvan/ankiconnect"
+	"github.com/gataky/sync/internal/mapper"
 	"github.com/gataky/sync/pkg/models"
 	"github.com/privatesquare/bkst-go-utils/utils/errors"
 )
@@ -68,84 +68,6 @@ func (c *AnkiClient) CreateDeck(deckName string) error {
 	return nil
 }
 
-// CreateNoteType creates the VocabSync note type with fields and card templates.
-// This operation checks if the model already exists before creating.
-func (c *AnkiClient) CreateNoteType(modelName string) error {
-	// Check if model already exists (with retry logic)
-	var modelList *[]string
-	err := retryWithBackoff("ListNoteTypes", 3, func() error {
-		var restErr *errors.RestErr
-		modelList, restErr = c.client.Models.GetAll()
-		if restErr != nil {
-			return fmt.Errorf("%s", restErr.Error)
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("failed to list note types: %v", err)
-	}
-
-	// If model exists, nothing to do
-	if modelList != nil {
-		for _, m := range *modelList {
-			if m == modelName {
-				return nil
-			}
-		}
-	}
-
-	// Define fields
-	fields := []string{"Front", "Back", "PartOfSpeech", "Grammar", "Examples"}
-
-	// Define card templates
-	cardTemplates := []ankiconnect.CardTemplate{
-		{
-			Name:  "English to Greek",
-			Front: "{{Front}} <small>({{PartOfSpeech}})</small>",
-			Back:  "{{Front}} <small>({{PartOfSpeech}})</small><hr>{{Back}}<br><br><small>{{Grammar}}</small><br><br>{{Examples}}",
-		},
-		{
-			Name:  "Greek to English",
-			Front: "{{Back}} <small>({{PartOfSpeech}})</small>",
-			Back:  "{{Back}} <small>({{PartOfSpeech}})</small><hr>{{Front}}<br><br><small>{{Grammar}}</small><br><br>{{Examples}}",
-		},
-	}
-
-	// Define CSS
-	css := `.card {
-	font-family: arial;
-	font-size: 20px;
-	text-align: center;
-	color: black;
-	background-color: white;
-}
-
-small {
-	font-size: 14px;
-	color: #666;
-}
-`
-
-	// Create the model
-	model := ankiconnect.Model{
-		ModelName:     modelName,
-		InOrderFields: fields,
-		Css:           css,
-		CardTemplates: cardTemplates,
-	}
-
-	if err := retryWithBackoff("CreateNoteType", 3, func() error {
-		if restErr := c.client.Models.Create(model); restErr != nil {
-			return fmt.Errorf("%s", restErr.Error)
-		}
-		return nil
-	}); err != nil {
-		return fmt.Errorf("failed to create note type %s after retries: %v", modelName, err)
-	}
-
-	return nil
-}
-
 // AddNote creates a single note in Anki and returns the generated note ID.
 // If a note with the same English+Greek combination already exists, updates it and returns that ID.
 // This allows linking sheet rows to existing Anki cards.
@@ -173,13 +95,7 @@ func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard,
 	}
 
 	// Build fields from card
-	fields := ankiconnect.Fields{
-		"Front":        card.English,
-		"Back":         backField,
-		"PartOfSpeech": card.PartOfSpeech,
-		"Grammar":      buildCardGrammarField(card),
-		"Examples":     formatExamplesHTML(card.Examples),
-	}
+	fields := buildNoteFields(card, backField)
 
 	// Build tags
 	tags := buildTags(card.Tag, card.SubTag1, card.SubTag2)
@@ -283,13 +199,7 @@ func (c *AnkiClient) UpdateNoteFields(noteID int64, card *models.VocabCard, audi
 	}
 
 	// Build updated fields
-	fields := ankiconnect.Fields{
-		"Front":        card.English,
-		"Back":         backField,
-		"PartOfSpeech": card.PartOfSpeech,
-		"Grammar":      buildCardGrammarField(card),
-		"Examples":     formatExamplesHTML(card.Examples),
-	}
+	fields := buildNoteFields(card, backField)
 
 	// Update note
 	updateNote := ankiconnect.UpdateNote{
@@ -367,169 +277,59 @@ func (c *AnkiClient) StoreAudioFile(filename string, audioData []byte) error {
 	return nil
 }
 
-// FindModifiedNotes finds notes that have been modified since the given timestamp.
-// Returns a list of note IDs.
-func (c *AnkiClient) FindModifiedNotes(deckName string, sinceTimestamp time.Time) ([]int64, error) {
-	// Calculate days since timestamp
-	daysSince := int(time.Since(sinceTimestamp).Hours() / 24)
-	if daysSince < 1 {
-		daysSince = 1
+// exampleSeparator separates a Greek example sentence from its English translation.
+const exampleSeparator = " — "
+
+// buildNoteFields builds the Anki note fields for a card. backField is the Greek text with any sound tag.
+func buildNoteFields(card *models.VocabCard, backField string) ankiconnect.Fields {
+	return ankiconnect.Fields{
+		"Front":        card.English,
+		"Back":         backField,
+		"PartOfSpeech": card.PartOfSpeech,
+		"Article":      mapper.NounArticle(card),
+		"Gender":       mapper.NounGender(card),
+		"Attributes":   card.Attributes,
+		"Voice":        card.Voice,
+		"ActiveForm":   card.ActiveForm,
+		"FutureSimple": card.FutureSimple,
+		"Aorist":       card.Aorist,
+		"Examples":     formatExamplesHTML(card.Examples),
+		"Notes":        formatNotesHTML(card.Notes),
 	}
-
-	// Build query: deck:"DeckName" edited:N
-	query := fmt.Sprintf(`deck:"%s" edited:%d`, deckName, daysSince)
-
-	var noteIDs *[]int64
-	err := retryWithBackoff("FindModifiedNotes", 3, func() error {
-		var restErr *errors.RestErr
-		noteIDs, restErr = c.client.Notes.Search(query)
-		if restErr != nil {
-			return fmt.Errorf("%s", restErr.Error)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to find modified notes after retries: %v", err)
-	}
-
-	if noteIDs == nil {
-		return []int64{}, nil
-	}
-
-	return *noteIDs, nil
-}
-
-// GetNotesInfo retrieves full information for the given note IDs.
-// Returns a slice of VocabCard structs populated with Anki data.
-func (c *AnkiClient) GetNotesInfo(noteIDs []int64) ([]*models.VocabCard, error) {
-	if len(noteIDs) == 0 {
-		return []*models.VocabCard{}, nil
-	}
-
-	// Convert noteIDs to strings for the query
-	queryParts := make([]string, len(noteIDs))
-	for i, id := range noteIDs {
-		queryParts[i] = fmt.Sprintf("nid:%d", id)
-	}
-	query := strings.Join(queryParts, " OR ")
-
-	var notesInfo *[]ankiconnect.ResultNotesInfo
-	err := retryWithBackoff("GetNotesInfo", 3, func() error {
-		var restErr *errors.RestErr
-		notesInfo, restErr = c.client.Notes.Get(query)
-		if restErr != nil {
-			return fmt.Errorf("%s", restErr.Error)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get notes info after retries: %v", err)
-	}
-
-	if notesInfo == nil {
-		return []*models.VocabCard{}, nil
-	}
-
-	cards := make([]*models.VocabCard, 0, len(*notesInfo))
-	for _, noteInfo := range *notesInfo {
-		card := &models.VocabCard{
-			AnkiID:       noteInfo.NoteId,
-			English:      noteInfo.Fields["Front"].Value,
-			Greek:        noteInfo.Fields["Back"].Value,
-			PartOfSpeech: noteInfo.Fields["PartOfSpeech"].Value,
-			ModifiedAt:   time.Now(), // Note: ankiconnect library doesn't expose modification time
-		}
-
-		// Parse Grammar field back to PartOfSpeech and Attributes
-		// Only parse PartOfSpeech from Grammar if the dedicated field is empty (backward compatibility)
-		grammarValue := noteInfo.Fields["Grammar"].Value
-		if card.PartOfSpeech == "" {
-			parseGrammarField(grammarValue, card)
-		} else {
-			// PartOfSpeech field exists, only extract Attributes from Grammar
-			// Still call parseGrammarField but save/restore PartOfSpeech
-			savedPartOfSpeech := card.PartOfSpeech
-			parseGrammarField(grammarValue, card)
-			card.PartOfSpeech = savedPartOfSpeech // Restore the dedicated field value
-		}
-
-		// Store examples as-is (HTML format)
-		card.Examples = noteInfo.Fields["Examples"].Value
-
-		// Parse tags back to hierarchy
-		parseTags(noteInfo.Tags, card)
-
-		cards = append(cards, card)
-	}
-
-	return cards, nil
-}
-
-// buildGrammarField combines part of speech and attributes into a single field.
-func buildGrammarField(partOfSpeech, attributes string) string {
-	if attributes == "" {
-		return partOfSpeech
-	}
-	return fmt.Sprintf("%s (%s)", partOfSpeech, attributes)
-}
-
-// grammarSeparator separates the base grammar text from the voice and active form.
-const grammarSeparator = " · "
-
-// activeFormPrefix marks the active form segment of the Grammar field.
-const activeFormPrefix = "Active: "
-
-// buildCardGrammarField builds the full Grammar field for a card, appending voice and
-// active form to the base grammar text, e.g. "Verb (Class B) · passive · Active: γράφω".
-func buildCardGrammarField(card *models.VocabCard) string {
-	parts := []string{buildGrammarField(card.PartOfSpeech, card.Attributes)}
-	if card.Voice != "" {
-		parts = append(parts, card.Voice)
-	}
-	if card.ActiveForm != "" {
-		parts = append(parts, activeFormPrefix+card.ActiveForm)
-	}
-	return strings.Join(parts, grammarSeparator)
 }
 
 // formatExamplesHTML converts examples text to HTML format.
-// Takes newline-separated examples and returns a numbered HTML list.
+// Each non-empty line becomes one example; "Greek — English" lines are split so the translation
+// can be styled separately.
 func formatExamplesHTML(examples string) string {
-	if examples == "" {
-		return ""
+	var out strings.Builder
+	for _, line := range nonEmptyLines(examples) {
+		out.WriteString(`<div class="ex">`)
+		if greek, english, found := strings.Cut(line, exampleSeparator); found {
+			fmt.Fprintf(&out, `<span class="ex-el">%s</span><span class="ex-en">%s</span>`,
+				strings.TrimSpace(greek), strings.TrimSpace(english))
+		} else {
+			fmt.Fprintf(&out, `<span class="ex-el">%s</span>`, line)
+		}
+		out.WriteString(`</div>`)
 	}
+	return out.String()
+}
 
-	// Split by newlines and filter empty lines
-	lines := strings.Split(examples, "\n")
-	var validLines []string
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed != "" {
-			validLines = append(validLines, trimmed)
+// formatNotesHTML converts notes text to HTML, keeping each non-empty line on its own line.
+func formatNotesHTML(notes string) string {
+	return strings.Join(nonEmptyLines(notes), "<br>")
+}
+
+// nonEmptyLines splits text into trimmed lines, dropping empty ones.
+func nonEmptyLines(text string) []string {
+	var lines []string
+	for _, line := range strings.Split(text, "\n") {
+		if trimmed := strings.TrimSpace(line); trimmed != "" {
+			lines = append(lines, trimmed)
 		}
 	}
-
-	// If no valid lines, return empty
-	if len(validLines) == 0 {
-		return ""
-	}
-
-	// If only one line, return it without list formatting
-	if len(validLines) == 1 {
-		return validLines[0]
-	}
-
-	// Multiple lines: create numbered list
-	var html strings.Builder
-	html.WriteString("<ol style='text-align: left; margin: 10px auto; display: inline-block;'>")
-	for _, line := range validLines {
-		html.WriteString("<li>")
-		html.WriteString(line)
-		html.WriteString("</li>")
-	}
-	html.WriteString("</ol>")
-
-	return html.String()
+	return lines
 }
 
 // buildTags constructs hierarchical tags from tag fields.
@@ -563,71 +363,4 @@ func buildTags(tag, subTag1, subTag2 string) []string {
 
 	tags = append(tags, fullTag)
 	return tags
-}
-
-// parseGrammarField splits grammar field back into part of speech, attributes, voice and active form.
-func parseGrammarField(grammar string, card *models.VocabCard) {
-	// Simple parsing: look for format "PartOfSpeech (Attributes) · Voice · Active: ActiveForm"
-	if grammar == "" {
-		return
-	}
-
-	// Split off voice and active form segments, if any
-	segments := strings.Split(grammar, grammarSeparator)
-	grammar = segments[0]
-	card.Voice = ""
-	card.ActiveForm = ""
-	for _, seg := range segments[1:] {
-		if strings.HasPrefix(seg, activeFormPrefix) {
-			card.ActiveForm = strings.TrimPrefix(seg, activeFormPrefix)
-		} else {
-			card.Voice = seg
-		}
-	}
-
-	// Check if there are parentheses
-	openParen := -1
-	closeParen := -1
-	for i, c := range grammar {
-		if c == '(' {
-			openParen = i
-		} else if c == ')' {
-			closeParen = i
-		}
-	}
-
-	if openParen > 0 && closeParen > openParen {
-		// Extract part of speech and attributes
-		card.PartOfSpeech = grammar[:openParen]
-		card.Attributes = grammar[openParen+1 : closeParen]
-		// Trim spaces
-		card.PartOfSpeech = card.PartOfSpeech[:len(card.PartOfSpeech)-1] // Remove trailing space before (
-		return
-	}
-
-	// No parentheses, entire string is part of speech
-	card.PartOfSpeech = grammar
-	card.Attributes = ""
-}
-
-// parseTags splits hierarchical tags back into individual tag fields.
-func parseTags(tags []string, card *models.VocabCard) {
-	if len(tags) == 0 {
-		return
-	}
-
-	// Take the first tag and split by ::
-	firstTag := tags[0]
-	parts := strings.Split(firstTag, "::")
-
-	// Assign to card fields
-	if len(parts) > 0 {
-		card.Tag = parts[0]
-	}
-	if len(parts) > 1 {
-		card.SubTag1 = parts[1]
-	}
-	if len(parts) > 2 {
-		card.SubTag2 = parts[2]
-	}
 }

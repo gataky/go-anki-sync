@@ -327,3 +327,19 @@ func TestCalculateChecksum_VoiceAndActiveForm(t *testing.T) {
 	withActive.ActiveForm = "γράφω"
 	assert.NotEqual(t, CalculateChecksum(&withVoice), CalculateChecksum(&withActive))
 }
+
+func TestCalculateChecksum_NotesAndPrincipalParts(t *testing.T) {
+	base := &models.VocabCard{English: "I write", Greek: "γράφω", PartOfSpeech: "verb"}
+	baseChecksum := CalculateChecksum(base)
+
+	// Cards without the new fields keep their previous checksum
+	assert.Equal(t, baseChecksum, CalculateChecksum(&models.VocabCard{English: "I write", Greek: "γράφω", PartOfSpeech: "verb"}))
+
+	for _, card := range []*models.VocabCard{
+		{English: "I write", Greek: "γράφω", PartOfSpeech: "verb", Notes: "note"},
+		{English: "I write", Greek: "γράφω", PartOfSpeech: "verb", FutureSimple: "γράψω"},
+		{English: "I write", Greek: "γράφω", PartOfSpeech: "verb", Aorist: "έγραψα"},
+	} {
+		assert.NotEqual(t, baseChecksum, CalculateChecksum(card))
+	}
+}

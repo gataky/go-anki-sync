@@ -17,7 +17,7 @@ type SheetsClientInterface interface {
 // AnkiClientInterface defines the methods needed from the Anki client.
 type AnkiClientInterface interface {
 	CreateDeck(deckName string) error
-	CreateNoteType(modelName string) error
+	EnsureNoteType(modelName string) error
 	AddNote(deckName, modelName string, card *models.VocabCard, audioData []byte, audioFilename string) (int64, error)
 	UpdateNoteFields(noteID int64, card *models.VocabCard, audioData []byte, audioFilename string) error
 	CheckAudioExists(filename string) (bool, error)

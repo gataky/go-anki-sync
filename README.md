@@ -1,20 +1,15 @@
 # Anki-Sheets Sync
 
-A bidirectional sync tool for managing vocabulary flashcards between Google Sheets and Anki.
+A sync tool that pushes vocabulary flashcards from Google Sheets to Anki.
 
 **🚀 New to this tool? Start with [SETUP.md](SETUP.md) for a 5-minute quick start guide!**
 
 ## Features
 
-- **Bidirectional Sync**: Keep your Google Sheets and Anki deck in perfect sync
+- **One-way Sync**: The Google Sheet is the source of truth; `push` creates and updates cards in Anki
 - **Checksum-based Change Detection**: Only syncs cards that have actually changed
-- **Conflict Resolution**: Timestamp-based last-write-wins strategy
 - **Dry-run Mode**: Preview changes before applying them
 - **Greek Audio Generation**: Automatic text-to-speech audio for Greek words using ElevenLabs or Google Cloud TTS
-- **Three Sync Modes**:
-  - `push`: Google Sheets → Anki
-  - `pull`: Anki → Google Sheets
-  - `both`: Bidirectional with conflict resolution
 
 ## Audio Generation (Text-to-Speech)
 
@@ -257,22 +252,8 @@ You'll be prompted for:
 
 No browser authorization needed - service accounts work automatically!
 
-### 4. Pull Changes (Anki → Sheets)
-
-```bash
-# Preview changes from Anki
-./sync pull --dry-run
-
-# Sync changes from Anki to Sheet
-./sync pull
-```
-
-### 5. Bidirectional Sync
-
-```bash
-# Sync in both directions with conflict resolution
-./sync both
-```
+Edit cards in the Google Sheet and run `./sync push` again; changes made directly in Anki are overwritten
+the next time that card is pushed.
 
 ## Google Sheet Format
 
@@ -285,16 +266,21 @@ Your spreadsheet should have these columns (order doesn't matter):
 | English | Yes | English word/phrase |
 | Greek | Yes | Greek translation |
 | Part of Speech | Yes | Noun, Verb, Adjective, etc. |
-| Attributes | No | Gender, verb class, etc. |
-| Examples | No | Usage examples (multiple lines become numbered list) |
+| Attributes | No | Gender (`masculine`, `feminine`, `neuter`, optionally `plural`), verb class, etc. |
+| Examples | No | One example per line, written as `Greek sentence — English translation` |
+| Notes | No | Usage notes, shown below the examples |
 | Tag | No | Top-level tag |
-| Sub-Tag 1 | No | Second-level tag |
-| Sub-Tag 2 | No | Third-level tag |
+| Sub Tag 1 | No | Second-level tag (`Sub-Tag 1` is also accepted) |
+| Sub Tag 2 | No | Third-level tag (`Sub-Tag 2` is also accepted) |
 | Regen TTS | No | Any value triggers audio regeneration |
 | Voice | No | Verb voice: `active`, `passive`, or `deponent` |
 | Active Form | No | Active form of a passive verb, if one exists |
+| Future Simple | No | Perfective future of a verb, without θα (e.g. `γράψω`) |
+| Aorist | No | Simple past of a verb (e.g. `έγραψα`) |
 
-Voice and Active Form are shown in the Anki card's Grammar field, e.g. `Verb (Class B) · passive · Active: γράφω`.
+For nouns, the definite article (ο, η, το, or οι, τα when the attributes say `plural`) is derived from the
+gender in Attributes. It is shown in front of the Greek word, which is colored by gender, and included in the
+generated audio. Greek text that already starts with an article is left as-is.
 
 ### Audio Regeneration
 
@@ -318,26 +304,22 @@ The **Regen TTS** column allows you to force regeneration of text-to-speech audi
 5. The audio is regenerated and the "x" is automatically cleared
 
 **Examples Field Formatting:**
-- Single example: Displays as plain text
-- Multiple examples: Use newlines to separate; displays as a numbered list in Anki
+- Put one example per line; separate the Greek sentence from its translation with ` — ` (an em dash with spaces)
+- The translation is shown dimmed below the Greek sentence; lines without ` — ` show only the Greek
+- Put explanations and usage notes in the Notes column rather than in Examples
 - Example in sheet cell:
   ```
-  This is the first example
-  This is the second example
-  This is the third example
+  Θέλω λίγο νερό. — I want a little water.
+  Θέλεις λίγο ψωμί; — Do you want a little bread?
   ```
-- Result in Anki:
-  1. This is the first example
-  2. This is the second example
-  3. This is the third example
 
 ### Example
 
-| Anki ID | Checksum | English | Greek | Part of Speech | Attributes | Examples | Tag | Sub-Tag 1 | Sub-Tag 2 | Regen TTS | Voice | Active Form |
-|---------|----------|---------|-------|----------------|------------|----------|-----|-----------|-----------|-----------|-------|-------------|
-|  | | hello | γεια | Interjection | Informal | Hello, how are you?<br>Γεια σου! | Greetings | Basic | | | | |
-|  | | house | σπίτι | Noun | Neuter | This is my house.<br>Where is your house? | City | Buildings | Residential | | | |
-|  | | to be written | γράφομαι | Verb | Class A | | | | | | passive | γράφω |
+| Anki ID | Checksum | English | Greek | Part of Speech | Attributes | Examples | Notes | Tag | Sub Tag 1 | Sub Tag 2 | Regen TTS | Voice | Active Form | Future Simple | Aorist |
+|---------|----------|---------|-------|----------------|------------|----------|-------|-----|-----------|-----------|-----------|-------|-------------|---------------|--------|
+|  | | hello | γεια | Interjection | Informal | Γεια σου! — Hi! | Informal greeting | Greetings | Basic | | | | | | |
+|  | | house | σπίτι | Noun | Neuter | Αυτό είναι το σπίτι μου. — This is my house. | | City | Buildings | Residential | | | | | |
+|  | | to be written | γράφομαι | Verb | c1 | | | | | | | passive | γράφω | γραφτώ | γράφτηκα |
 
 ## Command Reference
 
@@ -360,35 +342,15 @@ Initialize configuration by prompting for Sheet ID, sheet name, and Anki deck na
 Push new and modified cards from Google Sheets to Anki.
 
 ```bash
-./sync push [--dry-run] [--verbose]
+./sync push [--dry-run] [--verbose] [--force]
 ```
 
 - Creates new Anki cards for rows without an Anki ID
 - Updates existing cards if content has changed (checksum mismatch)
 - Writes Anki IDs and checksums back to the Sheet
-
-#### `pull`
-Pull modified cards from Anki to Google Sheets.
-
-```bash
-./sync pull [--dry-run] [--verbose]
-```
-
-- Queries Anki for cards modified since last pull
-- Updates corresponding Sheet rows
-- Tracks last pull timestamp in `~/.config/sync/state.json`
-
-#### `both`
-Bidirectional sync with conflict resolution.
-
-```bash
-./sync both [--dry-run] [--verbose]
-```
-
-- Pushes Sheet changes to Anki
-- Pulls Anki changes to Sheet
-- Resolves conflicts using timestamp-based strategy (most recent wins)
-- Logs all conflicts with resolution details
+- Updates the VocabSync note type's fields, templates and styling to the current layout
+- `-f, --force`: update every existing card, even unchanged ones (run once after a card layout change so
+  existing notes get the new fields)
 
 ## Configuration
 
@@ -425,23 +387,13 @@ text_to_speech:
 
 Service account credentials: `~/.config/sync/service-account.json`
 
-State (timestamps) is stored in `~/.config/sync/state.json`:
-
-```json
-{
-  "last_pull_timestamp": "2026-02-03T10:30:00Z",
-  "last_push_timestamp": "2026-02-03T10:30:00Z",
-  "config_hash": "abc123..."
-}
-```
-
 ## How It Works
 
 ### Change Detection
 
 The tool uses SHA256 checksums of content fields to detect changes:
 
-- **Content fields**: English, Greek, Part of Speech, Attributes, Examples, Tag, Sub-Tag 1, Sub-Tag 2, Voice, Active Form
+- **Content fields**: English, Greek, Part of Speech, Attributes, Examples, Notes, Tag, Sub Tag 1, Sub Tag 2, Voice, Active Form, Future Simple, Aorist
 - **Excluded from checksum**: Anki ID, Checksum (itself), Row Number, Modified At
 
 ### Duplicate Detection
@@ -456,30 +408,26 @@ The tool uses SHA256 checksums of content fields to detect changes:
 
 This allows multiple translations/meanings of the same English word.
 
-### Conflict Resolution
-
-When a card is modified in both Sheets and Anki:
-
-1. The tool detects the conflict
-2. Compares modification timestamps
-3. **Anki wins** if it has a modification timestamp
-4. **Sheet wins** if Anki has no timestamp
-5. Logs the conflict with details
-6. Applies the winner's changes to both systems
-
 ### AnkiConnect Note Type
 
-The tool automatically creates a "VocabSync" note type with:
+The tool automatically creates a "VocabSync" note type, and keeps an existing one up to date on every push
+(missing fields are added; templates and styling are replaced; review history is untouched).
 
 **Fields:**
-- Front (English)
-- Back (Greek)
-- Grammar (Part of Speech + Attributes)
-- Examples
+- Front (English), Back (Greek with audio), PartOfSpeech
+- Article, Gender (derived from Attributes for nouns)
+- Attributes, Voice, ActiveForm, FutureSimple, Aorist
+- Examples, Notes
+
+Note types created by earlier versions also keep their old Grammar field; it is no longer used.
 
 **Cards:**
-1. **English → Greek**: Shows English, reveals Greek with grammar and examples
-2. **Greek → English**: Shows Greek, reveals English with grammar and examples
+1. **English → Greek**: Shows English and part of speech, reveals the Greek word (with article and audio),
+   grammar, principal parts, examples and notes
+2. **Greek → English**: Shows the Greek word (with article and audio) and part of speech, reveals English and
+   the same details
+
+Both card types support Anki's night mode.
 
 ### Tags
 
@@ -537,8 +485,8 @@ sync/
 │   ├── config/        # Configuration management
 │   ├── mapper/        # Field mapping and checksums
 │   ├── sheets/        # Google Sheets client
-│   ├── state/         # State persistence
-│   └── sync/          # Sync orchestration
+│   ├── tts/           # Text-to-speech clients
+│   └── sync/          # Push orchestration
 ├── pkg/models/        # Domain models
 └── testdata/          # Test fixtures
 ```

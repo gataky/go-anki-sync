@@ -27,7 +27,11 @@ type VocabCard struct {
 	Attributes string
 
 	// Examples contains usage examples (raw text, will be converted to HTML) - Optional
+	// Each line is one example, written as "Greek sentence — English translation"
 	Examples string
+
+	// Notes contains usage notes shown below the examples - Optional
+	Notes string
 
 	// Tag is the top-level category - Optional
 	Tag string
@@ -43,6 +47,12 @@ type VocabCard struct {
 
 	// ActiveForm is the active form of a passive verb, if one exists - Optional
 	ActiveForm string
+
+	// FutureSimple is the perfective future stem of a verb, without θα (e.g. γράψω) - Optional
+	FutureSimple string
+
+	// Aorist is the simple past of a verb (e.g. έγραψα) - Optional
+	Aorist string
 
 	// RegenTTS indicates whether to force audio regeneration
 	// Any non-empty value triggers regeneration, automatically cleared after success

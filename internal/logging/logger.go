@@ -2,7 +2,7 @@
 // for sync operations.
 //
 // Each SyncLogger instance is intended for a single operation. Create a new
-// logger for each push/pull/init operation to avoid unbounded memory growth.
+// logger for each push/init operation to avoid unbounded memory growth.
 // SyncLogger is not thread-safe.
 package logging
 
@@ -95,23 +95,6 @@ func (l *SyncLogger) PrintSummary(operation string) {
 		}
 		if unchanged := l.stats["unchanged"]; unchanged > 0 {
 			parts = append(parts, fmt.Sprintf("%d unchanged", unchanged))
-		}
-	} else if operation == "Pull" {
-		if updated := l.stats["updated"]; updated > 0 {
-			parts = append(parts, fmt.Sprintf("%d updated", updated))
-		}
-		if skipped := l.stats["skipped"]; skipped > 0 {
-			parts = append(parts, fmt.Sprintf("%d skipped", skipped))
-		}
-	} else if operation == "Sync" {
-		if pushed := l.stats["pushed"]; pushed > 0 {
-			parts = append(parts, fmt.Sprintf("%d pushed", pushed))
-		}
-		if pulled := l.stats["pulled"]; pulled > 0 {
-			parts = append(parts, fmt.Sprintf("%d pulled", pulled))
-		}
-		if conflicts := l.stats["conflicts"]; conflicts > 0 {
-			parts = append(parts, fmt.Sprintf("%d conflicts", conflicts))
 		}
 	}
 
