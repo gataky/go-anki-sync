@@ -1,12 +1,80 @@
 package anki
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"testing"
 
+	"github.com/atselvan/ankiconnect"
 	"github.com/gataky/sync/pkg/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestBackMatchesGreek(t *testing.T) {
+	tests := []struct {
+		name     string
+		back     string
+		greek    string
+		expected bool
+	}{
+		{"plain text", "κρύο", "κρύο", true},
+		{"sound tag after a space", "κρύο [sound:κρύο-gtts-1.mp3]", "κρύο", true},
+		{"sound tag with no space", "κρύο[sound:κρύο.mp3]", "κρύο", true},
+		{"several sound tags", "κρύο [sound:a.mp3] [sound:b.mp3]", "κρύο", true},
+		{"different case", "Κρύο [sound:a.mp3]", "κρύο", true},
+		{"spaces around the sheet value", "ταξίδι [sound:a.mp3]", "ταξίδι ", true},
+		{"longer word with the same start", "κρύος [sound:κρύος-gtts-1.mp3]", "κρύο", false},
+		{"shorter word", "κρύο", "κρύος", false},
+		{"empty back", "", "κρύο", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, backMatchesGreek(tt.back, tt.greek))
+		})
+	}
+}
+
+func TestFindNoteByEnglishGreekIgnoresPrefixMatches(t *testing.T) {
+	// Anki's wildcard search for "κρύο*" returns both notes; only the exact word may be linked.
+	const adjectiveID, nounID = int64(111), int64(222)
+	notesInfo := map[string]any{
+		"result": []map[string]any{
+			{"noteId": adjectiveID, "fields": map[string]any{"Back": map[string]any{"value": "κρύος [sound:κρύος.mp3]"}}},
+			{"noteId": nounID, "fields": map[string]any{"Back": map[string]any{"value": "κρύο [sound:κρύο.mp3]"}}},
+		},
+		"error": nil,
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			Action string `json:"action"`
+		}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+
+		w.Header().Set("Content-Type", "application/json")
+		if request.Action == "findNotes" {
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{"result": []int64{adjectiveID, nounID}, "error": nil}))
+			return
+		}
+		require.NoError(t, json.NewEncoder(w).Encode(notesInfo))
+	}))
+	defer server.Close()
+
+	client := ankiconnect.NewClient()
+	client.SetURL(server.URL)
+	anki := &AnkiClient{client: client, url: server.URL}
+
+	id, err := anki.findNoteByEnglishGreek("Greek", "cold", "κρύο")
+	require.NoError(t, err)
+	assert.Equal(t, nounID, id)
+
+	_, err = anki.findNoteByEnglishGreek("Greek", "cold", "κρύ")
+	assert.Error(t, err, "a word with no exact match should not link to any note")
+}
 
 func TestBuildTags(t *testing.T) {
 	tests := []struct {

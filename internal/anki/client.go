@@ -3,6 +3,7 @@ package anki
 import (
 	"encoding/base64"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/atselvan/ankiconnect"
@@ -15,6 +16,9 @@ const (
 	// VocabSyncModelName is the name of the custom note type for vocabulary sync
 	VocabSyncModelName = "VocabSync"
 )
+
+// soundTagPattern matches the [sound:file] tags Anki stores alongside a field's text.
+var soundTagPattern = regexp.MustCompile(`\[sound:[^\]]*\]`)
 
 // AnkiClient provides methods to interact with AnkiConnect API.
 type AnkiClient struct {
@@ -153,15 +157,15 @@ func (c *AnkiClient) AddNote(deckName, modelName string, card *models.VocabCard,
 // findNoteByEnglishGreek searches for a note by English + Greek combination.
 // Returns the note ID if found, or 0 if not found.
 func (c *AnkiClient) findNoteByEnglishGreek(deckName, english, greek string) (int64, error) {
-	// Search by both Front (English) and Back (Greek) fields
-	// Use wildcard for Back field to match both "greek" and "greek [sound:...]"
-	// This ensures uniqueness is based on the combination
+	// Search by both Front (English) and Back (Greek) fields.
+	// The wildcard lets the search find "greek [sound:...]", but it also matches longer words that
+	// start with the same letters ("κρύο*" finds "κρύος"), so each result is compared exactly below.
 	query := fmt.Sprintf(`deck:"%s" "Front:%s" "Back:%s*"`, deckName, english, greek)
 
-	var noteIDs *[]int64
+	var notes *[]ankiconnect.ResultNotesInfo
 	err := retryWithBackoff("SearchNote", 3, func() error {
 		var restErr *errors.RestErr
-		noteIDs, restErr = c.client.Notes.Search(query)
+		notes, restErr = c.client.Notes.Get(query)
 		if restErr != nil {
 			return fmt.Errorf("%s", restErr.Error)
 		}
@@ -171,12 +175,22 @@ func (c *AnkiClient) findNoteByEnglishGreek(deckName, english, greek string) (in
 		return 0, fmt.Errorf("search failed after retries: %v", err)
 	}
 
-	if noteIDs == nil || len(*noteIDs) == 0 {
-		return 0, fmt.Errorf("note not found")
+	if notes != nil {
+		for _, note := range *notes {
+			if backMatchesGreek(note.Fields["Back"].Value, greek) {
+				return note.NoteId, nil
+			}
+		}
 	}
 
-	// Return the first matching note ID
-	return (*noteIDs)[0], nil
+	return 0, fmt.Errorf("note not found")
+}
+
+// backMatchesGreek reports whether a note's Back field holds exactly the given Greek text, ignoring
+// any [sound:...] tags. Case is ignored to match how Anki's own search compares text.
+func backMatchesGreek(back, greek string) bool {
+	text := soundTagPattern.ReplaceAllString(back, "")
+	return strings.EqualFold(strings.TrimSpace(text), strings.TrimSpace(greek))
 }
 
 // UpdateNoteFields updates the fields of an existing note without touching review history.
