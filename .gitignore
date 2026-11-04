@@ -42,6 +42,6 @@ build/
 
 docs/
 .direnv/
-.claude/
+# .claude/
 
 sync
